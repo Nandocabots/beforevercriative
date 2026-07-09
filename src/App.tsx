@@ -5,6 +5,7 @@ import ClientsTab from './components/ClientsTab';
 import ScheduleTab from './components/ScheduleTab';
 import ProductsTab from './components/ProductsTab';
 import UsersTab from './components/UsersTab';
+import bfLogo from './assets/images/bf_logo_1783625561882.jpg';
 import { 
   LayoutDashboard, 
   Users as UsersIcon, 
@@ -78,8 +79,13 @@ function AppContent() {
         >
           {/* Logo */}
           <div className="flex flex-col items-center justify-center text-center gap-2 mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-[#0B1B3D] dark:bg-blue-900/40 flex items-center justify-center text-[#C2B280] shadow-md shrink-0">
-              <Sparkles className="w-6 h-6" />
+            <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-md shrink-0 border border-slate-100 dark:border-zinc-800">
+              <img 
+                src={bfLogo} 
+                alt="BE FOREVER CRIATIVE" 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div className="leading-tight mt-2">
               <h1 className="font-display font-bold text-xl tracking-wider text-[#0B1B3D] dark:text-blue-300">
@@ -169,8 +175,13 @@ function AppContent() {
             
             {/* Brand logo */}
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#0B1B3D] flex items-center justify-center text-[#C2B280] shadow-sm shrink-0">
-                <Sparkles className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm shrink-0 border border-slate-100 dark:border-zinc-800">
+                <img 
+                  src={bfLogo} 
+                  alt="BE FOREVER CRIATIVE" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </div>
               <div className="leading-tight">
                 <h1 className="font-display font-bold text-base tracking-tight text-[#0B1B3D] dark:text-blue-300">
