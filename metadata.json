@@ -1,0 +1,6 @@
+{
+  "name": "Be Forever Criative",
+  "description": "Sistema completo de gestão para Be Forever Criative, sob os cuidados de João Victor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
