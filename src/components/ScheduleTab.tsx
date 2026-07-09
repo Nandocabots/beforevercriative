@@ -1023,7 +1023,7 @@ export default function ScheduleTab() {
                         <option value="" disabled>Escolha um paciente...</option>
                         {clients.map((c) => (
                           <option key={c.id} value={c.id}>
-                            {c.name} ({c.phone})
+                            {c.name}{c.phone ? ` (${c.phone})` : ''}
                           </option>
                         ))}
                       </select>
