@@ -32,6 +32,14 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+function getTodayString() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export default function ScheduleTab() {
   const { 
     clients, 
@@ -44,8 +52,8 @@ export default function ScheduleTab() {
     services
   } = useDatabase();
 
-  // Selected date defaults to simulated today: 2026-06-20
-  const [selectedDate, setSelectedDate] = useState<string>('2026-06-20');
+  // Selected date defaults to current date
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayString);
   const [filterStatus, setFilterStatus] = useState<string>('Todos');
   
   // Custom context menu for right-click on day
@@ -54,7 +62,7 @@ export default function ScheduleTab() {
   // New Appointment modal form state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [clientId, setClientId] = useState('');
-  const [date, setDate] = useState('2026-06-20');
+  const [date, setDate] = useState(getTodayString);
   const [time, setTime] = useState('14:00');
   const [endTime, setEndTime] = useState('');
   const [value, setValue] = useState('320');
@@ -177,9 +185,9 @@ export default function ScheduleTab() {
     } catch (e) {}
   };
 
-  // Jump to simulated today (2026-06-20)
-  const jumpToSimulatedToday = () => {
-    setSelectedDate('2026-06-20');
+  // Jump to actual today
+  const jumpToToday = () => {
+    setSelectedDate(getTodayString());
   };
 
   // Premium colors presets for calendar dots and service badges
@@ -635,7 +643,7 @@ export default function ScheduleTab() {
           </button>
           
           <button
-            onClick={jumpToSimulatedToday}
+            onClick={jumpToToday}
             className="px-5 h-10 rounded-xl border border-slate-200 dark:border-zinc-800 flex items-center justify-center font-semibold bg-white dark:bg-zinc-900 shadow-sm text-gray-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 text-sm transition-all active:scale-95"
           >
             Hoje
@@ -667,7 +675,7 @@ export default function ScheduleTab() {
         {monthDays.map((card, idx) => {
           const dayAppointments = appointments.filter((app) => app.date === card.dateString);
           const isSelected = selectedDate === card.dateString;
-          const isToday = card.dateString === '2026-06-20'; // simulated today for aesthetic parity
+          const isToday = card.dateString === getTodayString(); // real-time today check
           
           return (
             <div
