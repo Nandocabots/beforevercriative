@@ -70,9 +70,12 @@ export default function ScheduleTab() {
   const [notes, setNotes] = useState('');
   const [contact, setContact] = useState('');
   const [service, setService] = useState('Noiva');
-  const [includedServiceIds, setIncludedServiceIds] = useState<string[]>([]);
+  const [includedServices, setIncludedServices] = useState<{ serviceId: string; customCost: number }[]>([]);
+  const [servicePriceInput, setServicePriceInput] = useState<string>('');
   const [selectedServiceToAdd, setSelectedServiceToAdd] = useState('');
   const [formError, setFormError] = useState('');
+
+  const includedServiceIds = useMemo(() => includedServices.map(is => is.serviceId), [includedServices]);
 
   // Bride specific creation states
   const [packageValue, setPackageValue] = useState('1500');
@@ -108,9 +111,12 @@ export default function ScheduleTab() {
   const [editTime, setEditTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
   const [editDate, setEditDate] = useState('');
-  const [editIncludedServiceIds, setEditIncludedServiceIds] = useState<string[]>([]);
+  const [editIncludedServices, setEditIncludedServices] = useState<{ serviceId: string; customCost: number }[]>([]);
+  const [editServicePriceInput, setEditServicePriceInput] = useState<string>('');
   const [editSelectedServiceToAdd, setEditSelectedServiceToAdd] = useState('');
   const [editFormError, setEditFormError] = useState('');
+
+  const editIncludedServiceIds = useMemo(() => editIncludedServices.map(is => is.serviceId), [editIncludedServices]);
 
   // Delete appointment confirm states
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -290,10 +296,7 @@ export default function ScheduleTab() {
     }
 
     // Determine final financial value for persistence with included service costs
-    const servicesCost = includedServiceIds.reduce((sum, id) => {
-      const svcObj = services.find(s => s.id === id);
-      return sum + (svcObj ? svcObj.cost : 0);
-    }, 0);
+    const servicesCost = includedServices.reduce((sum, item) => sum + item.customCost, 0);
 
     const basePkgVal = parseFloat(packageValue) || 0;
     const baseValueVal = parseFloat(value) || 0;
@@ -323,10 +326,11 @@ export default function ScheduleTab() {
       postpaymentValue: restToPay,
       payments,
       includedServiceIds,
+      includedServices,
     });
 
     setIsModalOpen(false);
-    setIncludedServiceIds([]);
+    setIncludedServices([]);
     setSelectedServiceToAdd('');
     setSelectedDate(date);
   };
@@ -372,7 +376,18 @@ export default function ScheduleTab() {
     setEditTime(app.time || '14:00');
     setEditEndTime(app.endTime || '');
     setEditDate(app.date || '');
-    setEditIncludedServiceIds(app.includedServiceIds || []);
+    // Map existing includedServiceIds to custom priced objects if app.includedServices does not exist
+    if (app.includedServices && app.includedServices.length > 0) {
+      setEditIncludedServices(app.includedServices);
+    } else if (app.includedServiceIds && app.includedServiceIds.length > 0) {
+      const mapped = app.includedServiceIds.map(id => {
+        const s = services.find(item => item.id === id);
+        return { serviceId: id, customCost: s ? s.cost : 0 };
+      });
+      setEditIncludedServices(mapped);
+    } else {
+      setEditIncludedServices([]);
+    }
     setEditSelectedServiceToAdd('');
     setEditFormError('');
     setIsDetailsModalOpen(true);
@@ -405,10 +420,7 @@ export default function ScheduleTab() {
     }
 
     // Compute final value with included service costs
-    const editServicesCost = editIncludedServiceIds.reduce((sum, id) => {
-      const svcObj = services.find(s => s.id === id);
-      return sum + (svcObj ? svcObj.cost : 0);
-    }, 0);
+    const editServicesCost = editIncludedServices.reduce((sum, item) => sum + item.customCost, 0);
 
     const basePkgVal = parseFloat(editPackageValue) || 0;
     const baseValueVal = parseFloat(editValue) || 0;
@@ -439,6 +451,7 @@ export default function ScheduleTab() {
       endTime: editEndTime,
       date: editDate,
       includedServiceIds: editIncludedServiceIds,
+      includedServices: editIncludedServices,
     });
 
     setIsDetailsModalOpen(false);
@@ -1391,53 +1404,78 @@ export default function ScheduleTab() {
                         <span>Serviços / Adicionais Inclusos</span>
                       </label>
                       
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center">
                         <select
                           value={selectedServiceToAdd}
-                          onChange={(e) => setSelectedServiceToAdd(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSelectedServiceToAdd(val);
+                            const s = services.find(item => item.id === val);
+                            if (s) {
+                              setServicePriceInput(s.cost && s.cost > 0 ? s.cost.toString() : '');
+                            } else {
+                              setServicePriceInput('');
+                            }
+                          }}
                           className="flex-1 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100"
                         >
                           <option value="">Selecione um serviço para adicionar...</option>
                           {services.map((s) => (
                             <option key={s.id} value={s.id}>
-                              {s.name} ({formatCurrency(s.cost)})
+                              {s.name}
                             </option>
                           ))}
                         </select>
+
+                        {selectedServiceToAdd && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400 font-bold font-mono">R$</span>
+                            <input
+                              type="number"
+                              placeholder="Valor"
+                              value={servicePriceInput}
+                              onChange={(e) => setServicePriceInput(e.target.value)}
+                              className="w-20 px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 font-mono text-right font-semibold"
+                            />
+                          </div>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => {
                             if (!selectedServiceToAdd) return;
-                            if (includedServiceIds.includes(selectedServiceToAdd)) {
+                            if (includedServices.some(item => item.serviceId === selectedServiceToAdd)) {
                               alert('Este serviço já foi adicionado.');
                               return;
                             }
-                            setIncludedServiceIds([...includedServiceIds, selectedServiceToAdd]);
+                            const cost = parseFloat(servicePriceInput) || 0;
+                            setIncludedServices([...includedServices, { serviceId: selectedServiceToAdd, customCost: cost }]);
                             setSelectedServiceToAdd('');
+                            setServicePriceInput('');
                           }}
-                          className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl text-xs transition-all active:scale-95"
+                          className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl text-xs transition-all active:scale-95 whitespace-nowrap"
                         >
                           + Adicionar
                         </button>
                       </div>
 
-                      {includedServiceIds.length > 0 ? (
+                      {includedServices.length > 0 ? (
                         <div className="space-y-1.5 pt-1.5">
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Serviços adicionados:</p>
                           <div className="flex flex-wrap gap-1.5">
-                            {includedServiceIds.map((sid) => {
-                              const s = services.find(item => item.id === sid);
+                            {includedServices.map((item) => {
+                              const s = services.find(svc => svc.id === item.serviceId);
                               if (!s) return null;
                               return (
                                 <div
-                                  key={sid}
+                                  key={item.serviceId}
                                   className="flex items-center gap-1.5 pl-2.5 pr-1 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-medium text-gray-700 dark:text-zinc-200"
                                 >
                                   <span>{s.name}</span>
-                                  <span className="font-bold text-indigo-500">{formatCurrency(s.cost)}</span>
+                                  <span className="font-bold text-indigo-500">{formatCurrency(item.customCost)}</span>
                                   <button
                                     type="button"
-                                    onClick={() => setIncludedServiceIds(includedServiceIds.filter(id => id !== sid))}
+                                    onClick={() => setIncludedServices(includedServices.filter(is => is.serviceId !== item.serviceId))}
                                     className="p-0.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 rounded-md transition-colors"
                                   >
                                     <X className="w-3.5 h-3.5" />
@@ -1448,10 +1486,7 @@ export default function ScheduleTab() {
                           </div>
                           <div className="text-right text-[11px] font-bold text-emerald-600 dark:text-emerald-400 pt-1">
                             Adicional de Serviços: +{formatCurrency(
-                              includedServiceIds.reduce((sum, sid) => {
-                                const s = services.find(item => item.id === sid);
-                                return sum + (s ? s.cost : 0);
-                              }, 0)
+                              includedServices.reduce((sum, item) => sum + item.customCost, 0)
                             )}
                           </div>
                         </div>
@@ -1916,53 +1951,78 @@ export default function ScheduleTab() {
                     <span>Serviços Adicionais Inclusos</span>
                   </label>
                   
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <select
                       value={editSelectedServiceToAdd}
-                      onChange={(e) => setEditSelectedServiceToAdd(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditSelectedServiceToAdd(val);
+                        const s = services.find(item => item.id === val);
+                        if (s) {
+                          setEditServicePriceInput(s.cost && s.cost > 0 ? s.cost.toString() : '');
+                        } else {
+                          setEditServicePriceInput('');
+                        }
+                      }}
                       className="flex-1 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100"
                     >
                       <option value="">Selecione um serviço para adicionar...</option>
                       {services.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.name} ({formatCurrency(s.cost)})
+                          {s.name}
                         </option>
                       ))}
                     </select>
+
+                    {editSelectedServiceToAdd && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-400 font-bold font-mono">R$</span>
+                        <input
+                          type="number"
+                          placeholder="Valor"
+                          value={editServicePriceInput}
+                          onChange={(e) => setEditServicePriceInput(e.target.value)}
+                          className="w-20 px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 font-mono text-right font-semibold"
+                        />
+                      </div>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => {
                         if (!editSelectedServiceToAdd) return;
-                        if (editIncludedServiceIds.includes(editSelectedServiceToAdd)) {
+                        if (editIncludedServices.some(item => item.serviceId === editSelectedServiceToAdd)) {
                           alert('Este serviço já foi adicionado.');
                           return;
                         }
-                        setEditIncludedServiceIds([...editIncludedServiceIds, editSelectedServiceToAdd]);
+                        const cost = parseFloat(editServicePriceInput) || 0;
+                        setEditIncludedServices([...editIncludedServices, { serviceId: editSelectedServiceToAdd, customCost: cost }]);
                         setEditSelectedServiceToAdd('');
+                        setEditServicePriceInput('');
                       }}
-                      className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl text-xs transition-all active:scale-95"
+                      className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl text-xs transition-all active:scale-95 whitespace-nowrap"
                     >
                       + Adicionar
                     </button>
                   </div>
 
-                  {editIncludedServiceIds.length > 0 ? (
+                  {editIncludedServices.length > 0 ? (
                     <div className="space-y-1.5 pt-1.5">
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Serviços adicionados:</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {editIncludedServiceIds.map((sid) => {
-                          const s = services.find(item => item.id === sid);
+                        {editIncludedServices.map((item) => {
+                          const s = services.find(svc => svc.id === item.serviceId);
                           if (!s) return null;
                           return (
                             <div
-                              key={sid}
+                              key={item.serviceId}
                               className="flex items-center gap-1.5 pl-2.5 pr-1 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-medium text-gray-700 dark:text-zinc-200"
                             >
                               <span>{s.name}</span>
-                              <span className="font-bold text-indigo-500">{formatCurrency(s.cost)}</span>
+                              <span className="font-bold text-indigo-500">{formatCurrency(item.customCost)}</span>
                               <button
                                 type="button"
-                                onClick={() => setEditIncludedServiceIds(editIncludedServiceIds.filter(id => id !== sid))}
+                                onClick={() => setEditIncludedServices(editIncludedServices.filter(is => is.serviceId !== item.serviceId))}
                                 className="p-0.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 rounded-md transition-colors"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -1973,10 +2033,7 @@ export default function ScheduleTab() {
                       </div>
                       <div className="text-right text-[11px] font-bold text-emerald-600 dark:text-emerald-400 pt-1">
                         Adicional de Serviços: +{formatCurrency(
-                          editIncludedServiceIds.reduce((sum, sid) => {
-                            const s = services.find(item => item.id === sid);
-                            return sum + (s ? s.cost : 0);
-                          }, 0)
+                          editIncludedServices.reduce((sum, item) => sum + item.customCost, 0)
                         )}
                       </div>
                     </div>

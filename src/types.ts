@@ -65,6 +65,7 @@ export interface Appointment {
   postpaymentValue?: number;
   payments?: PaymentRecord[]; // Up to 3 payments (value and date)
   includedServiceIds?: string[]; // IDs of services added to this agendamento
+  includedServices?: { serviceId: string; customCost: number }[]; // Custom-priced services added to this agendamento
   endTime?: string; // HH:MM end time
 }
 

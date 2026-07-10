@@ -77,20 +77,20 @@ export default function ProductsTab() {
 
   const handleSaveService = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!svcName.trim() || !svcCost.trim()) return;
+    if (!svcName.trim()) return;
 
     if (editingService) {
       updateServiceItem({
         ...editingService,
         name: svcName.trim(),
         description: svcDescription.trim(),
-        cost: parseFloat(svcCost) || 0,
+        cost: 0,
       });
     } else {
       addServiceItem({
         name: svcName.trim(),
         description: svcDescription.trim(),
-        cost: parseFloat(svcCost) || 0,
+        cost: 0,
       });
     }
 
@@ -305,16 +305,7 @@ export default function ProductsTab() {
                 </p>
               </div>
 
-              {/* Footer displaying cost */}
-              <div className="mt-4 pt-3 border-t border-slate-50 dark:border-zinc-800/60 flex items-center justify-between text-[11px] text-gray-400">
-                <span className="flex items-center gap-1">
-                  <DollarSign className="w-3.5 h-3.5 text-[#8B5A2B]" />
-                  <span>Custo do Serviço:</span>
-                </span>
-                <span className="font-mono font-bold text-[#8B5A2B] dark:text-[#E6D8B8] text-sm">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.cost)}
-                </span>
-              </div>
+
             </motion.div>
           ))}
           {services.length === 0 && (
@@ -493,25 +484,6 @@ export default function ProductsTab() {
                     placeholder="Especifique os detalhes adicionais deste serviço..."
                     className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] text-gray-900 dark:text-zinc-100"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                    Custo / Valor Adicional (R$) *
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-2.5 text-xs text-gray-400 font-bold font-mono">R$</span>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="0.01"
-                      value={svcCost}
-                      onChange={(e) => setSvcCost(e.target.value)}
-                      placeholder="Ex: 150"
-                      className="w-full pl-9 pr-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5A2B]/30 focus:border-[#8B5A2B] text-gray-900 dark:text-zinc-100 font-mono"
-                    />
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2">

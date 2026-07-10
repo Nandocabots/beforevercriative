@@ -36,9 +36,9 @@ export default function DashboardTab({ isDarkMode }: DashboardTabProps) {
     // Total Pacotes (appointments)
     const totalAppointments = appointments.length;
 
-    // Total Services Included (sum of all includedServiceIds)
+    // Total Services Included (sum of all includedServiceIds/includedServices)
     const totalServicesCount = appointments.reduce((sum, app) => {
-      return sum + (app.includedServiceIds?.length || 0);
+      return sum + (app.includedServices?.length ?? app.includedServiceIds?.length ?? 0);
     }, 0);
 
     // Próximos Atendimentos Count (Count of all upcoming appointments)
@@ -83,9 +83,8 @@ export default function DashboardTab({ isDarkMode }: DashboardTabProps) {
           }
 
           monthsMap[key].pacotes += 1;
-          if (app.includedServiceIds) {
-            monthsMap[key].servicos += app.includedServiceIds.length;
-          }
+          const servCount = app.includedServices?.length ?? app.includedServiceIds?.length ?? 0;
+          monthsMap[key].servicos += servCount;
         }
       } catch (e) {}
     });
@@ -315,17 +314,30 @@ export default function DashboardTab({ isDarkMode }: DashboardTabProps) {
                     </div>
 
                     {/* Included services micro list */}
-                    {app.includedServiceIds && app.includedServiceIds.length > 0 && (
+                    {((app.includedServices && app.includedServices.length > 0) || (app.includedServiceIds && app.includedServiceIds.length > 0)) && (
                       <div className="flex flex-wrap gap-1 pt-1.5 border-t border-dashed border-gray-200/60 dark:border-zinc-800">
-                        {app.includedServiceIds.map((id) => {
-                          const s = services.find(item => item.id === id);
-                          if (!s) return null;
-                          return (
-                            <span key={id} className="text-[8px] px-1.5 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 rounded border border-emerald-100/30">
-                              {s.name}
-                            </span>
-                          );
-                        })}
+                        {app.includedServices && app.includedServices.length > 0 ? (
+                          app.includedServices.map((is) => {
+                            const s = services.find(item => item.id === is.serviceId);
+                            if (!s) return null;
+                            return (
+                              <span key={is.serviceId} className="text-[8px] px-1.5 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 rounded border border-emerald-100/30 flex items-center gap-1">
+                                <span>{s.name}</span>
+                                <span className="font-bold">R$ {is.customCost}</span>
+                              </span>
+                            );
+                          })
+                        ) : (
+                          app.includedServiceIds?.map((id) => {
+                            const s = services.find(item => item.id === id);
+                            if (!s) return null;
+                            return (
+                              <span key={id} className="text-[8px] px-1.5 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 rounded border border-emerald-100/30">
+                                {s.name}
+                              </span>
+                            );
+                          })
+                        )}
                       </div>
                     )}
                   </div>

@@ -1,0 +1,141 @@
+{
+  "entities": {
+    "Client": {
+      "title": "Client",
+      "description": "Represents a client in the studio database",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "birthDate": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "category": { "type": "string", "enum": ["clientes", "cerimonialistas", "terceiros"] }
+      },
+      "required": ["id", "name", "email", "phone", "birthDate", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Represents a user of the studio dashboard",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["master", "comum"] }
+      },
+      "required": ["id", "username", "role"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Represents a portfolio service type (e.g. Noiva)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "bgColor": { "type": "string" }
+      },
+      "required": ["id", "name", "description", "bgColor"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Represents additional service options (e.g. Maquiagem)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "cost": { "type": "number" }
+      },
+      "required": ["id", "name", "description", "cost"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Represents a scheduled booking with payments and services details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "patientName": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["Realizado", "Falta", "Pendente"] },
+        "value": { "type": "number" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "contact": { "type": "string" },
+        "service": { "type": "string" },
+        "packageValue": { "type": "number" },
+        "partyLocation": { "type": "string" },
+        "ceremonyPlannerName": { "type": "string" },
+        "ceremonyPlannerPhone": { "type": "string" },
+        "downpaymentValue": { "type": "number" },
+        "postpaymentValue": { "type": "number" },
+        "endTime": { "type": "string" },
+        "includedServiceIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "includedServices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "serviceId": { "type": "string" },
+              "customCost": { "type": "number" }
+            },
+            "required": ["serviceId", "customCost"]
+          }
+        }
+      },
+      "required": ["id", "clientId", "patientName", "date", "time", "status", "value", "createdAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Represents a financial flow record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "category": { "type": "string" },
+        "value": { "type": "number" },
+        "type": { "type": "string", "enum": ["Receita", "Despesa"] },
+        "status": { "type": "string", "enum": ["Pago", "Pendente"] },
+        "appointmentId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "description", "date", "category", "value", "type", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "clients/{clientId}": {
+      "schema": "Client",
+      "description": "The collection of clients"
+    },
+    "users/{userId}": {
+      "schema": "User",
+      "description": "The collection of users"
+    },
+    "products/{productId}": {
+      "schema": "Product",
+      "description": "The collection of products/service styles"
+    },
+    "services/{serviceId}": {
+      "schema": "Service",
+      "description": "The collection of extra services"
+    },
+    "appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "The collection of bookings"
+    },
+    "transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "The collection of billing/expenses records"
+    }
+  }
+}
