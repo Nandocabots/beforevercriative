@@ -296,14 +296,11 @@ export default function ScheduleTab() {
         }
       }
 
-      // Determine final financial value for persistence with included service costs
-      const servicesCost = includedServices.reduce((sum, item) => sum + item.customCost, 0);
-
       const basePkgVal = parseFloat(packageValue) || 0;
       const baseValueVal = parseFloat(value) || 0;
 
-      const finalPackageValue = service === 'Noiva' ? (basePkgVal + servicesCost) : undefined;
-      const finalValue = service === 'Noiva' ? (basePkgVal + servicesCost) : (baseValueVal + servicesCost);
+      const finalPackageValue = service === 'Noiva' ? basePkgVal : undefined;
+      const finalValue = service === 'Noiva' ? basePkgVal : baseValueVal;
 
       const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.value as any) || 0), 0);
       const restToPay = Math.max(0, finalValue - totalPaid);
@@ -425,14 +422,11 @@ export default function ScheduleTab() {
         }
       }
 
-      // Compute final value with included service costs
-      const editServicesCost = editIncludedServices.reduce((sum, item) => sum + item.customCost, 0);
-
       const basePkgVal = parseFloat(editPackageValue) || 0;
       const baseValueVal = parseFloat(editValue) || 0;
 
-      const finalPackageValue = editService === 'Noiva' ? (basePkgVal + editServicesCost) : undefined;
-      const finalValue = editService === 'Noiva' ? (basePkgVal + editServicesCost) : (baseValueVal + editServicesCost);
+      const finalPackageValue = editService === 'Noiva' ? basePkgVal : undefined;
+      const finalValue = editService === 'Noiva' ? basePkgVal : baseValueVal;
 
       const totalPaid = editPayments.reduce((sum, p) => sum + (parseFloat(p.value as any) || 0), 0);
       const restToPay = Math.max(0, finalValue - totalPaid);
@@ -1414,7 +1408,7 @@ export default function ScheduleTab() {
                         <span>Serviços / Adicionais Inclusos</span>
                       </label>
                       
-                      <div className="flex gap-2 items-center">
+                      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
                         <select
                           value={selectedServiceToAdd}
                           onChange={(e) => {
@@ -1427,7 +1421,7 @@ export default function ScheduleTab() {
                               setServicePriceInput('');
                             }
                           }}
-                          className="flex-1 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100"
+                          className="flex-1 min-w-0 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100"
                         >
                           <option value="">Selecione um serviço para adicionar...</option>
                           {services.map((s) => (
@@ -1437,36 +1431,45 @@ export default function ScheduleTab() {
                           ))}
                         </select>
 
-                        {selectedServiceToAdd && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-400 font-bold font-mono">R$</span>
-                            <input
-                              type="number"
-                              placeholder="Valor"
-                              value={servicePriceInput}
-                              onChange={(e) => setServicePriceInput(e.target.value)}
-                              className="w-20 px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 font-mono text-right font-semibold"
-                            />
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 justify-end sm:justify-start shrink-0">
+                          {selectedServiceToAdd && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-400 font-bold font-mono">R$</span>
+                              <input
+                                type="number"
+                                placeholder="Valor"
+                                value={servicePriceInput}
+                                onChange={(e) => setServicePriceInput(e.target.value)}
+                                className="w-20 px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 font-mono text-right font-semibold"
+                              />
+                            </div>
+                          )}
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!selectedServiceToAdd) return;
-                            if (includedServices.some(item => item.serviceId === selectedServiceToAdd)) {
-                              alert('Este serviço já foi adicionado.');
-                              return;
-                            }
-                            const cost = parseFloat(servicePriceInput) || 0;
-                            setIncludedServices([...includedServices, { serviceId: selectedServiceToAdd, customCost: cost }]);
-                            setSelectedServiceToAdd('');
-                            setServicePriceInput('');
-                          }}
-                          className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl text-xs transition-all active:scale-95 whitespace-nowrap"
-                        >
-                          + Adicionar
-                        </button>
+                          <button
+                            type="button"
+                           onClick={() => {
+                              if (!selectedServiceToAdd) return;
+                              if (includedServices.some(item => item.serviceId === selectedServiceToAdd)) {
+                                alert('Este serviço já foi adicionado.');
+                                return;
+                              }
+                              const cost = parseFloat(servicePriceInput) || 0;
+                              setIncludedServices([...includedServices, { serviceId: selectedServiceToAdd, customCost: cost }]);
+                              
+                              if (service === 'Noiva') {
+                                setPackageValue((prev) => ((parseFloat(prev) || 0) + cost).toString());
+                              } else {
+                                setValue((prev) => ((parseFloat(prev) || 0) + cost).toString());
+                              }
+
+                              setSelectedServiceToAdd('');
+                              setServicePriceInput('');
+                            }}
+                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl text-xs transition-all active:scale-95 whitespace-nowrap"
+                          >
+                            + Adicionar
+                          </button>
+                        </div>
                       </div>
 
                       {includedServices.length > 0 ? (
@@ -1485,7 +1488,17 @@ export default function ScheduleTab() {
                                   <span className="font-bold text-indigo-500">{formatCurrency(item.customCost)}</span>
                                   <button
                                     type="button"
-                                    onClick={() => setIncludedServices(includedServices.filter(is => is.serviceId !== item.serviceId))}
+                                    onClick={() => {
+                                      const itemToRemove = includedServices.find(is => is.serviceId === item.serviceId);
+                                      if (itemToRemove) {
+                                        if (service === 'Noiva') {
+                                          setPackageValue((prev) => Math.max(0, (parseFloat(prev) || 0) - itemToRemove.customCost).toString());
+                                        } else {
+                                          setValue((prev) => Math.max(0, (parseFloat(prev) || 0) - itemToRemove.customCost).toString());
+                                        }
+                                      }
+                                      setIncludedServices(includedServices.filter(is => is.serviceId !== item.serviceId));
+                                    }}
                                     className="p-0.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 rounded-md transition-colors"
                                   >
                                     <X className="w-3.5 h-3.5" />
@@ -1961,7 +1974,7 @@ export default function ScheduleTab() {
                     <span>Serviços Adicionais Inclusos</span>
                   </label>
                   
-                  <div className="flex gap-2 items-center">
+                  <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
                     <select
                       value={editSelectedServiceToAdd}
                       onChange={(e) => {
@@ -1974,7 +1987,7 @@ export default function ScheduleTab() {
                           setEditServicePriceInput('');
                         }
                       }}
-                      className="flex-1 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100"
+                      className="flex-1 min-w-0 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100"
                     >
                       <option value="">Selecione um serviço para adicionar...</option>
                       {services.map((s) => (
@@ -1984,36 +1997,45 @@ export default function ScheduleTab() {
                       ))}
                     </select>
 
-                    {editSelectedServiceToAdd && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-400 font-bold font-mono">R$</span>
-                        <input
-                          type="number"
-                          placeholder="Valor"
-                          value={editServicePriceInput}
-                          onChange={(e) => setEditServicePriceInput(e.target.value)}
-                          className="w-20 px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 font-mono text-right font-semibold"
-                        />
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 justify-end sm:justify-start shrink-0">
+                      {editSelectedServiceToAdd && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400 font-bold font-mono">R$</span>
+                          <input
+                            type="number"
+                            placeholder="Valor"
+                            value={editServicePriceInput}
+                            onChange={(e) => setEditServicePriceInput(e.target.value)}
+                            className="w-20 px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 font-mono text-right font-semibold"
+                          />
+                        </div>
+                      )}
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!editSelectedServiceToAdd) return;
-                        if (editIncludedServices.some(item => item.serviceId === editSelectedServiceToAdd)) {
-                          alert('Este serviço já foi adicionado.');
-                          return;
-                        }
-                        const cost = parseFloat(editServicePriceInput) || 0;
-                        setEditIncludedServices([...editIncludedServices, { serviceId: editSelectedServiceToAdd, customCost: cost }]);
-                        setEditSelectedServiceToAdd('');
-                        setEditServicePriceInput('');
-                      }}
-                      className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl text-xs transition-all active:scale-95 whitespace-nowrap"
-                    >
-                      + Adicionar
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!editSelectedServiceToAdd) return;
+                          if (editIncludedServices.some(item => item.serviceId === editSelectedServiceToAdd)) {
+                            alert('Este serviço já foi adicionado.');
+                            return;
+                          }
+                          const cost = parseFloat(editServicePriceInput) || 0;
+                          setEditIncludedServices([...editIncludedServices, { serviceId: editSelectedServiceToAdd, customCost: cost }]);
+                          
+                          if (editService === 'Noiva') {
+                            setEditPackageValue((prev) => ((parseFloat(prev) || 0) + cost).toString());
+                          } else {
+                            setEditValue((prev) => ((parseFloat(prev) || 0) + cost).toString());
+                          }
+
+                          setEditSelectedServiceToAdd('');
+                          setEditServicePriceInput('');
+                        }}
+                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl text-xs transition-all active:scale-95 whitespace-nowrap"
+                      >
+                        + Adicionar
+                      </button>
+                    </div>
                   </div>
 
                   {editIncludedServices.length > 0 ? (
@@ -2032,7 +2054,17 @@ export default function ScheduleTab() {
                               <span className="font-bold text-indigo-500">{formatCurrency(item.customCost)}</span>
                               <button
                                 type="button"
-                                onClick={() => setEditIncludedServices(editIncludedServices.filter(is => is.serviceId !== item.serviceId))}
+                                onClick={() => {
+                                  const itemToRemove = editIncludedServices.find(is => is.serviceId === item.serviceId);
+                                  if (itemToRemove) {
+                                    if (editService === 'Noiva') {
+                                      setEditPackageValue((prev) => Math.max(0, (parseFloat(prev) || 0) - itemToRemove.customCost).toString());
+                                    } else {
+                                      setEditValue((prev) => Math.max(0, (parseFloat(prev) || 0) - itemToRemove.customCost).toString());
+                                    }
+                                  }
+                                  setEditIncludedServices(editIncludedServices.filter(is => is.serviceId !== item.serviceId));
+                                }}
                                 className="p-0.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 rounded-md transition-colors"
                               >
                                 <X className="w-3.5 h-3.5" />
