@@ -52,6 +52,26 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
+function cleanUndefined(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return undefined;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => typeof item === 'object' ? cleanUndefined(item) : item).filter(item => item !== undefined);
+  }
+  if (typeof obj === 'object') {
+    const newObj: any = {};
+    Object.keys(obj).forEach((key) => {
+      const val = cleanUndefined(obj[key]);
+      if (val !== undefined) {
+        newObj[key] = val;
+      }
+    });
+    return newObj;
+  }
+  return obj;
+}
+
 
 // Initial Seed Data for Be Forever Criative
 const INITIAL_CLIENTS: Client[] = [
@@ -506,7 +526,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
     try {
-      setDoc(doc(db, 'clients', newId), newClient);
+      setDoc(doc(db, 'clients', newId), cleanUndefined(newClient));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `clients/${newId}`);
     }
@@ -515,7 +535,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
 
   const updateClient = (updatedClient: Client) => {
     try {
-      setDoc(doc(db, 'clients', updatedClient.id), updatedClient);
+      setDoc(doc(db, 'clients', updatedClient.id), cleanUndefined(updatedClient));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `clients/${updatedClient.id}`);
     }
@@ -524,7 +544,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     appointments.forEach((app) => {
       if (app.clientId === updatedClient.id && app.patientName !== updatedClient.name) {
         try {
-          setDoc(doc(db, 'appointments', app.id), { ...app, patientName: updatedClient.name });
+          setDoc(doc(db, 'appointments', app.id), cleanUndefined({ ...app, patientName: updatedClient.name }));
         } catch (error) {
           handleFirestoreError(error, OperationType.WRITE, `appointments/${app.id}`);
         }
@@ -549,7 +569,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
     try {
-      setDoc(doc(db, 'appointments', newId), newApp);
+      setDoc(doc(db, 'appointments', newId), cleanUndefined(newApp));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `appointments/${newId}`);
     }
@@ -558,7 +578,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
 
   const updateAppointment = (updatedApp: Appointment) => {
     try {
-      setDoc(doc(db, 'appointments', updatedApp.id), updatedApp);
+      setDoc(doc(db, 'appointments', updatedApp.id), cleanUndefined(updatedApp));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `appointments/${updatedApp.id}`);
     }
@@ -581,7 +601,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
     try {
-      setDoc(doc(db, 'transactions', newId), newTrans);
+      setDoc(doc(db, 'transactions', newId), cleanUndefined(newTrans));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `transactions/${newId}`);
     }
@@ -590,7 +610,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
 
   const updateTransaction = (updatedTrans: Transaction) => {
     try {
-      setDoc(doc(db, 'transactions', updatedTrans.id), updatedTrans);
+      setDoc(doc(db, 'transactions', updatedTrans.id), cleanUndefined(updatedTrans));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `transactions/${updatedTrans.id}`);
     }
@@ -628,7 +648,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
       id: newId,
     };
     try {
-      setDoc(doc(db, 'products', newId), newProduct);
+      setDoc(doc(db, 'products', newId), cleanUndefined(newProduct));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `products/${newId}`);
     }
@@ -645,7 +665,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
 
   const updateProduct = (updatedProduct: Product) => {
     try {
-      setDoc(doc(db, 'products', updatedProduct.id), updatedProduct);
+      setDoc(doc(db, 'products', updatedProduct.id), cleanUndefined(updatedProduct));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `products/${updatedProduct.id}`);
     }
@@ -659,7 +679,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
       id: newId,
     };
     try {
-      setDoc(doc(db, 'services', newId), newService);
+      setDoc(doc(db, 'services', newId), cleanUndefined(newService));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `services/${newId}`);
     }
@@ -676,7 +696,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
 
   const updateServiceItem = (updatedService: Service) => {
     try {
-      setDoc(doc(db, 'services', updatedService.id), updatedService);
+      setDoc(doc(db, 'services', updatedService.id), cleanUndefined(updatedService));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `services/${updatedService.id}`);
     }

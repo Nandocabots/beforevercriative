@@ -280,59 +280,64 @@ export default function ScheduleTab() {
       return;
     }
 
-    // Save planner as client if selected and info is present
-    if (service === 'Noiva' && savePlannerAsClient && ceremonyPlannerName.trim()) {
-      const plannerExists = clients.some(c => c.name.toLowerCase() === ceremonyPlannerName.trim().toLowerCase());
-      if (!plannerExists) {
-        addClient({
-          name: ceremonyPlannerName.trim(),
-          phone: ceremonyPlannerPhone.trim(),
-          email: '',
-          birthDate: '',
-          notes: `Cerimonialista contratado pela noiva ${selectedClient.name}. Cadastrado via fluxo de agendamento.`,
-          category: 'cerimonialistas'
-        });
+    try {
+      // Save planner as client if selected and info is present
+      if (service === 'Noiva' && savePlannerAsClient && ceremonyPlannerName.trim()) {
+        const plannerExists = clients.some(c => c.name.toLowerCase() === ceremonyPlannerName.trim().toLowerCase());
+        if (!plannerExists) {
+          addClient({
+            name: ceremonyPlannerName.trim(),
+            phone: ceremonyPlannerPhone.trim(),
+            email: '',
+            birthDate: '',
+            notes: `Cerimonialista contratado pela noiva ${selectedClient.name}. Cadastrado via fluxo de agendamento.`,
+            category: 'cerimonialistas'
+          });
+        }
       }
+
+      // Determine final financial value for persistence with included service costs
+      const servicesCost = includedServices.reduce((sum, item) => sum + item.customCost, 0);
+
+      const basePkgVal = parseFloat(packageValue) || 0;
+      const baseValueVal = parseFloat(value) || 0;
+
+      const finalPackageValue = service === 'Noiva' ? (basePkgVal + servicesCost) : undefined;
+      const finalValue = service === 'Noiva' ? (basePkgVal + servicesCost) : (baseValueVal + servicesCost);
+
+      const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.value as any) || 0), 0);
+      const restToPay = Math.max(0, finalValue - totalPaid);
+
+      addAppointment({
+        clientId,
+        patientName: selectedClient.name,
+        date,
+        time,
+        endTime,
+        status,
+        value: finalValue,
+        notes: notes.trim(),
+        contact: contact.trim() || selectedClient.phone,
+        service,
+        packageValue: finalPackageValue,
+        partyLocation: service === 'Noiva' ? partyLocation.trim() : undefined,
+        ceremonyPlannerName: service === 'Noiva' ? ceremonyPlannerName.trim() : undefined,
+        ceremonyPlannerPhone: service === 'Noiva' ? ceremonyPlannerPhone.trim() : undefined,
+        downpaymentValue: totalPaid,
+        postpaymentValue: restToPay,
+        payments,
+        includedServiceIds,
+        includedServices,
+      });
+
+      setIsModalOpen(false);
+      setIncludedServices([]);
+      setSelectedServiceToAdd('');
+      setSelectedDate(date);
+    } catch (err: any) {
+      console.error(err);
+      setFormError('Erro ao agendar: ' + (err.message || String(err)));
     }
-
-    // Determine final financial value for persistence with included service costs
-    const servicesCost = includedServices.reduce((sum, item) => sum + item.customCost, 0);
-
-    const basePkgVal = parseFloat(packageValue) || 0;
-    const baseValueVal = parseFloat(value) || 0;
-
-    const finalPackageValue = service === 'Noiva' ? (basePkgVal + servicesCost) : undefined;
-    const finalValue = service === 'Noiva' ? (basePkgVal + servicesCost) : (baseValueVal + servicesCost);
-
-    const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.value as any) || 0), 0);
-    const restToPay = Math.max(0, finalValue - totalPaid);
-
-    addAppointment({
-      clientId,
-      patientName: selectedClient.name,
-      date,
-      time,
-      endTime,
-      status,
-      value: finalValue,
-      notes: notes.trim(),
-      contact: contact.trim() || selectedClient.phone,
-      service,
-      packageValue: finalPackageValue,
-      partyLocation: service === 'Noiva' ? partyLocation.trim() : undefined,
-      ceremonyPlannerName: service === 'Noiva' ? ceremonyPlannerName.trim() : undefined,
-      ceremonyPlannerPhone: service === 'Noiva' ? ceremonyPlannerPhone.trim() : undefined,
-      downpaymentValue: totalPaid,
-      postpaymentValue: restToPay,
-      payments,
-      includedServiceIds,
-      includedServices,
-    });
-
-    setIsModalOpen(false);
-    setIncludedServices([]);
-    setSelectedServiceToAdd('');
-    setSelectedDate(date);
   };
 
   // Open Details & Edit Modal
@@ -404,57 +409,62 @@ export default function ScheduleTab() {
       return;
     }
 
-    // Save planner as client if selected and info is present
-    if (editService === 'Noiva' && editSavePlannerAsClient && editCeremonyPlannerName.trim()) {
-      const plannerExists = clients.some(c => c.name.toLowerCase() === editCeremonyPlannerName.trim().toLowerCase());
-      if (!plannerExists) {
-        addClient({
-          name: editCeremonyPlannerName.trim(),
-          phone: editCeremonyPlannerPhone.trim(),
-          email: '',
-          birthDate: '',
-          notes: `Cerimonialista contratado pela noiva ${updatedClientObj.name}. Cadastrado via edição de agendamento.`,
-          category: 'cerimonialistas'
-        });
+    try {
+      // Save planner as client if selected and info is present
+      if (editService === 'Noiva' && editSavePlannerAsClient && editCeremonyPlannerName.trim()) {
+        const plannerExists = clients.some(c => c.name.toLowerCase() === editCeremonyPlannerName.trim().toLowerCase());
+        if (!plannerExists) {
+          addClient({
+            name: editCeremonyPlannerName.trim(),
+            phone: editCeremonyPlannerPhone.trim(),
+            email: '',
+            birthDate: '',
+            notes: `Cerimonialista contratado pela noiva ${updatedClientObj.name}. Cadastrado via edição de agendamento.`,
+            category: 'cerimonialistas'
+          });
+        }
       }
+
+      // Compute final value with included service costs
+      const editServicesCost = editIncludedServices.reduce((sum, item) => sum + item.customCost, 0);
+
+      const basePkgVal = parseFloat(editPackageValue) || 0;
+      const baseValueVal = parseFloat(editValue) || 0;
+
+      const finalPackageValue = editService === 'Noiva' ? (basePkgVal + editServicesCost) : undefined;
+      const finalValue = editService === 'Noiva' ? (basePkgVal + editServicesCost) : (baseValueVal + editServicesCost);
+
+      const totalPaid = editPayments.reduce((sum, p) => sum + (parseFloat(p.value as any) || 0), 0);
+      const restToPay = Math.max(0, finalValue - totalPaid);
+
+      updateAppointment({
+        ...selectedApp,
+        clientId: editClientId,
+        patientName: updatedClientObj.name,
+        contact: editContact.trim() || updatedClientObj.phone,
+        service: editService,
+        packageValue: finalPackageValue,
+        partyLocation: editService === 'Noiva' ? editPartyLocation.trim() : undefined,
+        ceremonyPlannerName: editService === 'Noiva' ? editCeremonyPlannerName.trim() : undefined,
+        ceremonyPlannerPhone: editService === 'Noiva' ? editCeremonyPlannerPhone.trim() : undefined,
+        downpaymentValue: totalPaid,
+        postpaymentValue: restToPay,
+        payments: editPayments,
+        notes: editNotes.trim(),
+        value: finalValue,
+        status: editStatus,
+        time: editTime,
+        endTime: editEndTime,
+        date: editDate,
+        includedServiceIds: editIncludedServiceIds,
+        includedServices: editIncludedServices,
+      });
+
+      setIsDetailsModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      setEditFormError('Erro ao atualizar agendamento: ' + (err.message || String(err)));
     }
-
-    // Compute final value with included service costs
-    const editServicesCost = editIncludedServices.reduce((sum, item) => sum + item.customCost, 0);
-
-    const basePkgVal = parseFloat(editPackageValue) || 0;
-    const baseValueVal = parseFloat(editValue) || 0;
-
-    const finalPackageValue = editService === 'Noiva' ? (basePkgVal + editServicesCost) : undefined;
-    const finalValue = editService === 'Noiva' ? (basePkgVal + editServicesCost) : (baseValueVal + editServicesCost);
-
-    const totalPaid = editPayments.reduce((sum, p) => sum + (parseFloat(p.value as any) || 0), 0);
-    const restToPay = Math.max(0, finalValue - totalPaid);
-
-    updateAppointment({
-      ...selectedApp,
-      clientId: editClientId,
-      patientName: updatedClientObj.name,
-      contact: editContact.trim() || updatedClientObj.phone,
-      service: editService,
-      packageValue: finalPackageValue,
-      partyLocation: editService === 'Noiva' ? editPartyLocation.trim() : undefined,
-      ceremonyPlannerName: editService === 'Noiva' ? editCeremonyPlannerName.trim() : undefined,
-      ceremonyPlannerPhone: editService === 'Noiva' ? editCeremonyPlannerPhone.trim() : undefined,
-      downpaymentValue: totalPaid,
-      postpaymentValue: restToPay,
-      payments: editPayments,
-      notes: editNotes.trim(),
-      value: finalValue,
-      status: editStatus,
-      time: editTime,
-      endTime: editEndTime,
-      date: editDate,
-      includedServiceIds: editIncludedServiceIds,
-      includedServices: editIncludedServices,
-    });
-
-    setIsDetailsModalOpen(false);
   };
 
   // Quick save payments for Noiva without closing the details modal
@@ -1266,7 +1276,7 @@ export default function ScheduleTab() {
                           type="number"
                           min="0"
                           step="0.01"
-                          required
+                          required={service !== 'Noiva'}
                           disabled={service === 'Noiva'}
                           value={service === 'Noiva' ? packageValue : value}
                           onChange={(e) => {
@@ -1802,7 +1812,7 @@ export default function ScheduleTab() {
                       type="number"
                       min="0"
                       step="0.01"
-                      required
+                      required={editService !== 'Noiva'}
                       disabled={editService === 'Noiva'}
                       value={editService === 'Noiva' ? editPackageValue : editValue}
                       onChange={(e) => {
