@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDatabase } from '../databaseService';
-import { Appointment, AppointmentStatus, Client } from '../types';
+import { Appointment, AppointmentStatus, Client, PaymentRecord } from '../types';
 import { 
   Calendar, 
   Clock, 
@@ -56,6 +56,7 @@ export default function ScheduleTab() {
   const [clientId, setClientId] = useState('');
   const [date, setDate] = useState('2026-06-20');
   const [time, setTime] = useState('14:00');
+  const [endTime, setEndTime] = useState('');
   const [value, setValue] = useState('320');
   const [status, setStatus] = useState<AppointmentStatus>('Pendente');
   const [notes, setNotes] = useState('');
@@ -73,6 +74,9 @@ export default function ScheduleTab() {
   const [savePlannerAsClient, setSavePlannerAsClient] = useState(false);
   const [downpaymentValue, setDownpaymentValue] = useState('500');
   const [postpaymentValue, setPostpaymentValue] = useState('0');
+  const [payments, setPayments] = useState<PaymentRecord[]>([
+    { id: '1', value: 0, date: new Date().toISOString().split('T')[0] }
+  ]);
 
   // Appointment Details View / Edit modal state
   const [selectedApp, setSelectedApp] = useState<Appointment | null>(null);
@@ -89,10 +93,12 @@ export default function ScheduleTab() {
   const [editSavePlannerAsClient, setEditSavePlannerAsClient] = useState(false);
   const [editDownpaymentValue, setEditDownpaymentValue] = useState('');
   const [editPostpaymentValue, setEditPostpaymentValue] = useState('');
+  const [editPayments, setEditPayments] = useState<PaymentRecord[]>([]);
   const [editNotes, setEditNotes] = useState('');
   const [editValue, setEditValue] = useState('');
   const [editStatus, setEditStatus] = useState<AppointmentStatus>('Pendente');
   const [editTime, setEditTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
   const [editDate, setEditDate] = useState('');
   const [editIncludedServiceIds, setEditIncludedServiceIds] = useState<string[]>([]);
   const [editSelectedServiceToAdd, setEditSelectedServiceToAdd] = useState('');
@@ -223,6 +229,7 @@ export default function ScheduleTab() {
     setClientId(clients[0]?.id || '');
     setDate(targetDate);
     setTime('14:00');
+    setEndTime('15:00');
     setValue('320');
     setStatus('Pendente');
     setNotes('');
@@ -236,8 +243,11 @@ export default function ScheduleTab() {
     setCeremonyPlannerName('');
     setCeremonyPlannerPhone('');
     setSavePlannerAsClient(false);
-    setDownpaymentValue('500');
-    setPostpaymentValue('0');
+    setDownpaymentValue('0');
+    setPostpaymentValue('1500');
+    setPayments([
+      { id: '1', value: 0, date: targetDate }
+    ]);
 
     setIsModalOpen(true);
   };
@@ -283,11 +293,15 @@ export default function ScheduleTab() {
     const finalPackageValue = service === 'Noiva' ? (basePkgVal + servicesCost) : undefined;
     const finalValue = service === 'Noiva' ? (basePkgVal + servicesCost) : (baseValueVal + servicesCost);
 
+    const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.value as any) || 0), 0);
+    const restToPay = Math.max(0, finalValue - totalPaid);
+
     addAppointment({
       clientId,
       patientName: selectedClient.name,
       date,
       time,
+      endTime,
       status,
       value: finalValue,
       notes: notes.trim(),
@@ -297,8 +311,9 @@ export default function ScheduleTab() {
       partyLocation: service === 'Noiva' ? partyLocation.trim() : undefined,
       ceremonyPlannerName: service === 'Noiva' ? ceremonyPlannerName.trim() : undefined,
       ceremonyPlannerPhone: service === 'Noiva' ? ceremonyPlannerPhone.trim() : undefined,
-      downpaymentValue: service === 'Noiva' ? (parseFloat(downpaymentValue) || 0) : undefined,
-      postpaymentValue: service === 'Noiva' ? (parseFloat(postpaymentValue) || 0) : undefined,
+      downpaymentValue: totalPaid,
+      postpaymentValue: restToPay,
+      payments,
       includedServiceIds,
     });
 
@@ -319,12 +334,35 @@ export default function ScheduleTab() {
     setEditCeremonyPlannerName(app.ceremonyPlannerName || '');
     setEditCeremonyPlannerPhone(app.ceremonyPlannerPhone || '');
     setEditSavePlannerAsClient(false);
-    setEditDownpaymentValue(app.downpaymentValue?.toString() || '500');
+    setEditDownpaymentValue(app.downpaymentValue?.toString() || '0');
     setEditPostpaymentValue(app.postpaymentValue?.toString() || '0');
+    
+    // Migrate or load payments
+    const initialPayments: PaymentRecord[] = [];
+    if (app.payments && app.payments.length > 0) {
+      initialPayments.push(...app.payments);
+    } else {
+      if (app.downpaymentValue && app.downpaymentValue > 0) {
+        initialPayments.push({
+          id: 'pay-1',
+          value: app.downpaymentValue,
+          date: app.date || new Date().toISOString().split('T')[0]
+        });
+      } else {
+        initialPayments.push({
+          id: 'pay-1',
+          value: 0,
+          date: app.date || new Date().toISOString().split('T')[0]
+        });
+      }
+    }
+    setEditPayments(initialPayments);
+
     setEditNotes(app.notes || '');
     setEditValue(app.value?.toString() || '320');
     setEditStatus(app.status || 'Pendente');
     setEditTime(app.time || '14:00');
+    setEditEndTime(app.endTime || '');
     setEditDate(app.date || '');
     setEditIncludedServiceIds(app.includedServiceIds || []);
     setEditSelectedServiceToAdd('');
@@ -370,6 +408,9 @@ export default function ScheduleTab() {
     const finalPackageValue = editService === 'Noiva' ? (basePkgVal + editServicesCost) : undefined;
     const finalValue = editService === 'Noiva' ? (basePkgVal + editServicesCost) : (baseValueVal + editServicesCost);
 
+    const totalPaid = editPayments.reduce((sum, p) => sum + (parseFloat(p.value as any) || 0), 0);
+    const restToPay = Math.max(0, finalValue - totalPaid);
+
     updateAppointment({
       ...selectedApp,
       clientId: editClientId,
@@ -380,12 +421,14 @@ export default function ScheduleTab() {
       partyLocation: editService === 'Noiva' ? editPartyLocation.trim() : undefined,
       ceremonyPlannerName: editService === 'Noiva' ? editCeremonyPlannerName.trim() : undefined,
       ceremonyPlannerPhone: editService === 'Noiva' ? editCeremonyPlannerPhone.trim() : undefined,
-      downpaymentValue: editService === 'Noiva' ? (parseFloat(editDownpaymentValue) || 0) : undefined,
-      postpaymentValue: editService === 'Noiva' ? (parseFloat(editPostpaymentValue) || 0) : undefined,
+      downpaymentValue: totalPaid,
+      postpaymentValue: restToPay,
+      payments: editPayments,
       notes: editNotes.trim(),
       value: finalValue,
       status: editStatus,
       time: editTime,
+      endTime: editEndTime,
       date: editDate,
       includedServiceIds: editIncludedServiceIds,
     });
@@ -398,8 +441,6 @@ export default function ScheduleTab() {
     if (!selectedApp) return;
 
     const pkgVal = parseFloat(editPackageValue) || 0;
-    const downPayment = parseFloat(editDownpaymentValue) || 0;
-    const postPayment = parseFloat(editPostpaymentValue) || 0;
 
     // Optional: save planner as client if checked at this point
     if (editSavePlannerAsClient && editCeremonyPlannerName.trim()) {
@@ -417,15 +458,20 @@ export default function ScheduleTab() {
       setEditSavePlannerAsClient(false);
     }
 
+    const finalVal = editService === 'Noiva' ? pkgVal : (parseFloat(editValue) || 0);
+    const totalPaid = editPayments.reduce((sum, p) => sum + (parseFloat(p.value as any) || 0), 0);
+    const restToPay = Math.max(0, finalVal - totalPaid);
+
     const updatedApp = {
       ...selectedApp,
-      packageValue: pkgVal,
-      downpaymentValue: downPayment,
-      postpaymentValue: postPayment,
-      value: pkgVal,
-      partyLocation: editPartyLocation.trim(),
-      ceremonyPlannerName: editCeremonyPlannerName.trim(),
-      ceremonyPlannerPhone: editCeremonyPlannerPhone.trim(),
+      packageValue: editService === 'Noiva' ? pkgVal : undefined,
+      downpaymentValue: totalPaid,
+      postpaymentValue: restToPay,
+      payments: editPayments,
+      value: finalVal,
+      partyLocation: editService === 'Noiva' ? editPartyLocation.trim() : undefined,
+      ceremonyPlannerName: editService === 'Noiva' ? editCeremonyPlannerName.trim() : undefined,
+      ceremonyPlannerPhone: editService === 'Noiva' ? editCeremonyPlannerPhone.trim() : undefined,
       contact: editContact.trim(),
       notes: editNotes.trim(),
     };
@@ -673,9 +719,9 @@ export default function ScheduleTab() {
                       }}
                       style={styleObj.style}
                       className={`text-[10px] leading-tight px-1.5 py-0.5 rounded-lg truncate font-medium flex items-center gap-1 transition-all ${styleObj.className}`}
-                      title={`${app.time} - ${app.patientName} (${app.service})`}
+                      title={`${app.time}${app.endTime ? ` - ${app.endTime}` : ''} - ${app.patientName} (${app.service})`}
                     >
-                      <span className="font-bold shrink-0">{app.time}</span>
+                      <span className="font-bold shrink-0">{app.time}{app.endTime ? `-${app.endTime}` : ''}</span>
                       <span className="truncate">{app.patientName}</span>
                     </div>
                   );
@@ -695,7 +741,7 @@ export default function ScheduleTab() {
                     <span 
                       key={app.id} 
                       className={`w-1.5 h-1.5 rounded-full shrink-0 ${app.service === 'Noiva' ? 'bg-[#C2B280]' : themeColors.dot}`} 
-                      title={`${app.time} - ${app.patientName}`}
+                      title={`${app.time}${app.endTime ? ` - ${app.endTime}` : ''} - ${app.patientName}`}
                     />
                   );
                 })}
@@ -809,7 +855,7 @@ export default function ScheduleTab() {
                       : 'bg-slate-50 dark:bg-zinc-800/60 text-indigo-600 dark:text-indigo-400 border-slate-100/55 dark:border-zinc-800/30'
                   }`}>
                     <Clock className={`w-5 h-5 mb-1 ${app.service === 'Noiva' ? 'text-[#0B1B3D]' : 'text-indigo-500'}`} />
-                    <span className="font-mono text-sm font-bold">{app.time}</span>
+                    <span className="font-mono text-xs font-bold whitespace-nowrap">{app.time}{app.endTime ? ` - ${app.endTime}` : ''}</span>
                   </div>
 
                   <div className="space-y-1 min-w-0">
@@ -1023,7 +1069,7 @@ export default function ScheduleTab() {
                         <option value="" disabled>Escolha um paciente...</option>
                         {clients.map((c) => (
                           <option key={c.id} value={c.id}>
-                            {c.name}{c.phone ? ` (${c.phone})` : ''}
+                            {c.name}
                           </option>
                         ))}
                       </select>
@@ -1137,52 +1183,10 @@ export default function ScheduleTab() {
                             Cadastrar cerimonialista
                           </label>
                         </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#C2B280]/20 dark:border-zinc-800">
-                          <div>
-                            <label className="block text-[11px] font-bold text-[#0B1B3D] dark:text-blue-300 mb-1">
-                              Valor Pago na Entrada (R$)
-                            </label>
-                            <input
-                              type="number"
-                              value={downpaymentValue}
-                              onChange={(e) => setDownpaymentValue(e.target.value)}
-                              placeholder="Ex: 500"
-                              className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-[#C2B280]/30 dark:border-zinc-800 rounded-xl text-sm font-mono text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-[#0B1B3D] dark:text-blue-300 mb-1">
-                              Valor Pago Depois (R$)
-                            </label>
-                            <input
-                              type="number"
-                              value={postpaymentValue}
-                              onChange={(e) => setPostpaymentValue(e.target.value)}
-                              placeholder="Ex: 1000"
-                              className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-[#C2B280]/30 dark:border-zinc-800 rounded-xl text-sm font-mono text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                            />
-                          </div>
-                        </div>
-
-                        {/* REAL-TIME BALANCE SHEET PREVIEW */}
-                        <div className="p-3 bg-[#FAF7F0] dark:bg-zinc-800/40 rounded-xl flex items-center justify-between text-xs border border-[#C2B280]/20">
-                          <span className="font-bold text-[#0B1B3D] dark:text-blue-300">Resta pagar:</span>
-                          <span className={`font-mono font-bold text-sm ${
-                            (parseFloat(packageValue) || 0) - (parseFloat(downpaymentValue) || 0) - (parseFloat(postpaymentValue) || 0) > 0
-                              ? 'text-rose-600 dark:text-rose-400'
-                              : 'text-emerald-600 dark:text-emerald-400'
-                          }`}>
-                            {formatCurrency(
-                              (parseFloat(packageValue) || 0) - (parseFloat(downpaymentValue) || 0) - (parseFloat(postpaymentValue) || 0)
-                            )}
-                          </span>
-                        </div>
                       </fieldset>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {/* Date */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
@@ -1197,10 +1201,10 @@ export default function ScheduleTab() {
                         />
                       </div>
 
-                      {/* Time */}
+                      {/* Start Time */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                          Horário
+                          Horário de Início
                         </label>
                         <input
                           type="time"
@@ -1210,14 +1214,32 @@ export default function ScheduleTab() {
                           className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-mono"
                         />
                       </div>
+
+                      {/* End Time */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                          Horário de Término
+                        </label>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-mono"
+                        />
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Cost - only editable for non-brides since bride overrides value */}
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
-                          <Coins className="w-3.5 h-3.5" />
-                          <span>Valor Cobrado (R$) {service === 'Noiva' && '(Espelhado do Pacote)'}</span>
+                    {/* SEÇÃO FINANCEIRA UNIVERSAL */}
+                    <fieldset className="p-4 border border-indigo-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/20 rounded-2xl space-y-4">
+                      <legend className="text-xs font-bold text-indigo-500 px-2 flex items-center gap-1">
+                        <Coins className="w-3.5 h-3.5" />
+                        <span>Controle Financeiro</span>
+                      </legend>
+
+                      {/* Valor Cobrado */}
+                      <div className="max-w-xs">
+                        <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">
+                          Valor Total Cobrado (R$) {service === 'Noiva' && '(Ficha)'}
                         </label>
                         <input
                           type="number"
@@ -1226,27 +1248,132 @@ export default function ScheduleTab() {
                           required
                           disabled={service === 'Noiva'}
                           value={service === 'Noiva' ? packageValue : value}
-                          onChange={(e) => setValue(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (service === 'Noiva') {
+                              setPackageValue(val);
+                            } else {
+                              setValue(val);
+                            }
+                          }}
                           placeholder="Ex: 320.00"
-                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-mono disabled:opacity-60"
+                          className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs font-mono text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
                         />
                       </div>
 
-                      {/* Status */}
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                          Presença Inicial
-                        </label>
-                        <select
-                          value={status}
-                          onChange={(e) => setStatus(e.target.value as AppointmentStatus)}
-                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
-                        >
-                          <option value="Pendente">Pendente (Agendado)</option>
-                          <option value="Realizado">Realizado</option>
-                          <option value="Falta">Falta (Confirmou falta)</option>
-                        </select>
+                      {/* Histórico de Pagamentos */}
+                      <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-xs font-bold text-gray-700 dark:text-zinc-300">
+                            Histórico de Pagamentos ({payments.length})
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPayments([
+                                ...payments,
+                                { id: Date.now().toString(), value: 0, date: date || new Date().toISOString().split('T')[0] }
+                              ]);
+                            }}
+                            className="px-2.5 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 border border-indigo-200 dark:border-zinc-800 rounded-lg flex items-center gap-1 transition-all active:scale-95"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Adicionar Pagamento</span>
+                          </button>
+                        </div>
+
+                        {payments.length === 0 ? (
+                          <p className="text-xs text-gray-400 dark:text-zinc-500 italic py-1">Nenhum pagamento registrado.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {payments.map((pmt, idx) => (
+                              <div key={pmt.id} className="flex items-center gap-2.5 p-2 bg-white dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800 rounded-xl shadow-xs">
+                                <span className="text-[11px] font-bold text-indigo-500 w-8 shrink-0">
+                                  #{idx + 1}
+                                </span>
+                                
+                                <div className="grid grid-cols-2 gap-2 flex-1">
+                                  {/* Valor */}
+                                  <div>
+                                    <label className="block text-[9px] font-bold text-gray-400 dark:text-zinc-500 mb-0.5">
+                                      Valor Pago (R$)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={pmt.value || ''}
+                                      onChange={(e) => {
+                                        const val = parseFloat(e.target.value) || 0;
+                                        setPayments(payments.map(p => p.id === pmt.id ? { ...p, value: val } : p));
+                                      }}
+                                      placeholder="Ex: 500"
+                                      className="w-full px-2 py-1 bg-slate-50 dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 rounded-lg text-xs font-mono text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    />
+                                  </div>
+
+                                  {/* Data Pago */}
+                                  <div>
+                                    <label className="block text-[9px] font-bold text-gray-400 dark:text-zinc-500 mb-0.5">
+                                      Data de Pagamento
+                                    </label>
+                                    <input
+                                      type="date"
+                                      value={pmt.date}
+                                      onChange={(e) => {
+                                        setPayments(payments.map(p => p.id === pmt.id ? { ...p, date: e.target.value } : p));
+                                      }}
+                                      className="w-full px-2 py-1 bg-slate-50 dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 rounded-lg text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Deletar parcela */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPayments(payments.filter(p => p.id !== pmt.id));
+                                  }}
+                                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all active:scale-95 self-end mb-0.5"
+                                  title="Remover este pagamento"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
+
+                      {/* BALANCE SHEET PREVIEW */}
+                      <div className="p-2.5 bg-indigo-50/50 dark:bg-zinc-800/40 rounded-xl flex items-center justify-between text-xs border border-indigo-100/30 dark:border-zinc-800">
+                        <span className="font-bold text-indigo-500">Resta pagar:</span>
+                        <span className={`font-mono font-bold text-xs ${
+                          (parseFloat(service === 'Noiva' ? packageValue : value) || 0) - payments.reduce((sum, p) => sum + (p.value || 0), 0) > 0
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : 'text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                          {formatCurrency(
+                            (parseFloat(service === 'Noiva' ? packageValue : value) || 0) - payments.reduce((sum, p) => sum + (p.value || 0), 0)
+                          )}
+                        </span>
+                      </div>
+                    </fieldset>
+
+                    {/* Status */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                        Presença Inicial
+                      </label>
+                      <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as AppointmentStatus)}
+                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
+                      >
+                        <option value="Pendente">Pendente (Agendado)</option>
+                        <option value="Realizado">Realizado</option>
+                        <option value="Falta">Falta (Confirmou falta)</option>
+                      </select>
                     </div>
 
                     {/* INCLUDED SERVICES (Serviços Adicionais) */}
@@ -1554,65 +1681,26 @@ export default function ScheduleTab() {
                       </label>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#C2B280]/20 dark:border-zinc-800">
-                      <div>
-                        <label className="block text-[11px] font-bold text-[#0B1B3D] dark:text-blue-300 mb-1">
-                          Valor Pago na Entrada (R$)
-                        </label>
-                        <input
-                          type="number"
-                          value={editDownpaymentValue}
-                          onChange={(e) => setEditDownpaymentValue(e.target.value)}
-                          placeholder="Ex: 500"
-                          className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-[#C2B280]/30 dark:border-zinc-800 rounded-xl text-sm font-mono text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-[#0B1B3D] dark:text-blue-300 mb-1">
-                          Valor Pago Depois (R$)
-                        </label>
-                        <input
-                          type="number"
-                          value={editPostpaymentValue}
-                          onChange={(e) => setEditPostpaymentValue(e.target.value)}
-                          placeholder="Ex: 1000"
-                          className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-[#C2B280]/30 dark:border-zinc-800 rounded-xl text-sm font-mono text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end pt-1">
-                      <button
-                        type="button"
-                        onClick={handleQuickSavePayments}
-                        className="px-3.5 py-1.5 bg-[#0B1B3D] hover:bg-[#11244A] active:scale-95 text-white text-[11px] font-semibold rounded-xl shadow-sm flex items-center gap-1 transition-all"
-                      >
-                        <DollarSign className="w-3.5 h-3.5" />
-                        <span>Salvar Valor Pago</span>
-                      </button>
-                    </div>
-
                     {/* DYNAMIC REAL-TIME BALANCE SHEET PREVIEW IN POPUP */}
                     <div className="p-3 bg-[#FAF7F0] dark:bg-zinc-800/40 rounded-xl flex items-center justify-between text-xs border border-[#C2B280]/20">
                       <div className="flex items-center gap-1 text-[#0B1B3D] dark:text-blue-300">
                         <Info className="w-3.5 h-3.5 text-[#C2B280]" />
-                        <span className="font-bold">Balanço (Resta Pagar):</span>
+                        <span className="font-bold">Balanço do Pacote (Resta Pagar):</span>
                       </div>
                       <span className={`font-mono font-bold text-sm ${
-                        (parseFloat(editPackageValue) || 0) - (parseFloat(editDownpaymentValue) || 0) - (parseFloat(editPostpaymentValue) || 0) > 0
+                        (parseFloat(editPackageValue) || 0) - editPayments.reduce((sum, p) => sum + (p.value || 0), 0) > 0
                           ? 'text-rose-600 dark:text-rose-400 animate-pulse'
-                          : 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-[#0B1B3D] dark:text-[#C2B280]'
                       }`}>
                         {formatCurrency(
-                          (parseFloat(editPackageValue) || 0) - (parseFloat(editDownpaymentValue) || 0) - (parseFloat(editPostpaymentValue) || 0)
+                          (parseFloat(editPackageValue) || 0) - editPayments.reduce((sum, p) => sum + (p.value || 0), 0)
                         )}
                       </span>
                     </div>
                   </fieldset>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Edit Date */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
@@ -1630,7 +1718,7 @@ export default function ScheduleTab() {
                   {/* Edit Time */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                      Horário
+                      Horário de Início
                     </label>
                     <input
                       type="time"
@@ -1640,14 +1728,32 @@ export default function ScheduleTab() {
                       className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-mono"
                     />
                   </div>
+
+                  {/* Edit End Time */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                      Horário de Término
+                    </label>
+                    <input
+                      type="time"
+                      value={editEndTime}
+                      onChange={(e) => setEditEndTime(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-mono"
+                    />
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Edit Value - disabled if "Noiva" to force bridal package sync */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1">
-                      <Coins className="w-3.5 h-3.5" />
-                      <span>Valor Cobrado (R$) {editService === 'Noiva' && '(Espelhado do Pacote)'}</span>
+                {/* SEÇÃO FINANCEIRA UNIVERSAL DO AGENDAMENTO (EDIT) */}
+                <fieldset className="p-4 border border-indigo-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/20 rounded-2xl space-y-4">
+                  <legend className="text-xs font-bold text-indigo-500 px-2 flex items-center gap-1">
+                    <Coins className="w-3.5 h-3.5" />
+                    <span>Controle Financeiro</span>
+                  </legend>
+
+                  {/* Valor Cobrado */}
+                  <div className="max-w-xs">
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">
+                      Valor Total Cobrado (R$) {editService === 'Noiva' && '(Ficha)'}
                     </label>
                     <input
                       type="number"
@@ -1656,27 +1762,143 @@ export default function ScheduleTab() {
                       required
                       disabled={editService === 'Noiva'}
                       value={editService === 'Noiva' ? editPackageValue : editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      placeholder="Ex: 320"
-                      className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-mono disabled:opacity-60"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (editService === 'Noiva') {
+                          setEditPackageValue(val);
+                        } else {
+                          setEditValue(val);
+                        }
+                      }}
+                      placeholder="Ex: 320.00"
+                      className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs font-mono text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-60"
                     />
                   </div>
 
-                  {/* Edit Presence Status */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                      Presença / Status
-                    </label>
-                    <select
-                      value={editStatus}
-                      onChange={(e) => setEditStatus(e.target.value as AppointmentStatus)}
-                      className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
-                    >
-                      <option value="Pendente">Pendente</option>
-                      <option value="Realizado">Realizado</option>
-                      <option value="Falta">Falta</option>
-                    </select>
+                  {/* Histórico de Pagamentos */}
+                  <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-xs font-bold text-gray-700 dark:text-zinc-300">
+                        Histórico de Pagamentos ({editPayments.length})
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditPayments([
+                            ...editPayments,
+                            { id: Date.now().toString(), value: 0, date: editDate || new Date().toISOString().split('T')[0] }
+                          ]);
+                        }}
+                        className="px-2.5 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 border border-indigo-200 dark:border-zinc-800 rounded-lg flex items-center gap-1 transition-all active:scale-95"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Adicionar Pagamento</span>
+                      </button>
+                    </div>
+
+                    {editPayments.length === 0 ? (
+                      <p className="text-xs text-gray-400 dark:text-zinc-500 italic py-1">Nenhum pagamento registrado.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {editPayments.map((pmt, idx) => (
+                          <div key={pmt.id} className="flex items-center gap-2.5 p-2 bg-white dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800 rounded-xl shadow-xs">
+                            <span className="text-[11px] font-bold text-indigo-500 w-8 shrink-0">
+                              #{idx + 1}
+                            </span>
+                            
+                            <div className="grid grid-cols-2 gap-2 flex-1">
+                              {/* Valor */}
+                              <div>
+                                <label className="block text-[9px] font-bold text-gray-400 dark:text-zinc-500 mb-0.5">
+                                  Valor Pago (R$)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={pmt.value || ''}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    setEditPayments(editPayments.map(p => p.id === pmt.id ? { ...p, value: val } : p));
+                                  }}
+                                  placeholder="Ex: 500"
+                                  className="w-full px-2 py-1 bg-slate-50 dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 rounded-lg text-xs font-mono text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+
+                              {/* Data Pago */}
+                              <div>
+                                <label className="block text-[9px] font-bold text-gray-400 dark:text-zinc-500 mb-0.5">
+                                  Data de Pagamento
+                                </label>
+                                <input
+                                  type="date"
+                                  value={pmt.date}
+                                  onChange={(e) => {
+                                    setEditPayments(editPayments.map(p => p.id === pmt.id ? { ...p, date: e.target.value } : p));
+                                  }}
+                                  className="w-full px-2 py-1 bg-slate-50 dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 rounded-lg text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Deletar parcela */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditPayments(editPayments.filter(p => p.id !== pmt.id));
+                              }}
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all active:scale-95 self-end mb-0.5"
+                              title="Remover este pagamento"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
+                  <div className="flex justify-between items-center pt-1 border-t border-slate-100 dark:border-zinc-800/80">
+                    {/* Real-time balance status */}
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="font-bold text-gray-500 dark:text-gray-400">Resta pagar:</span>
+                      <span className={`font-mono font-bold ${
+                        (parseFloat(editService === 'Noiva' ? editPackageValue : editValue) || 0) - editPayments.reduce((sum, p) => sum + (p.value || 0), 0) > 0
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : 'text-emerald-600 dark:text-emerald-400'
+                      }`}>
+                        {formatCurrency(
+                          (parseFloat(editService === 'Noiva' ? editPackageValue : editValue) || 0) - editPayments.reduce((sum, p) => sum + (p.value || 0), 0)
+                        )}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleQuickSavePayments}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-[11px] font-semibold rounded-xl shadow-sm flex items-center gap-1 transition-all"
+                    >
+                      <DollarSign className="w-3.5 h-3.5" />
+                      <span>Salvar Valores Rapidamente</span>
+                    </button>
+                  </div>
+                </fieldset>
+
+                {/* Edit Presence Status */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                    Presença / Status
+                  </label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as AppointmentStatus)}
+                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
+                  >
+                    <option value="Pendente">Pendente</option>
+                    <option value="Realizado">Realizado</option>
+                    <option value="Falta">Falta</option>
+                  </select>
                 </div>
 
                 {/* EDIT INCLUDED SERVICES (Serviços Adicionais no Edição) */}

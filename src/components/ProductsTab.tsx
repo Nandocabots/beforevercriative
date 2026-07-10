@@ -16,12 +16,25 @@ const PRESET_COLORS = [
 ];
 
 export default function ProductsTab() {
-  const { products, services, addProduct, deleteProduct, addServiceItem, deleteServiceItem } = useDatabase();
+  const { 
+    products, 
+    services, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    addServiceItem, 
+    updateServiceItem, 
+    deleteServiceItem 
+  } = useDatabase();
   const [activeSubTab, setActiveSubTab] = useState<'produtos' | 'servicos'>('produtos');
 
   // Delete confirm states
   const [deleteProductConfirmId, setDeleteProductConfirmId] = useState<string | null>(null);
   const [deleteServiceConfirmId, setDeleteServiceConfirmId] = useState<string | null>(null);
+
+  // Editing state
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingService, setEditingService] = useState<Service | null>(null);
 
   // Product states
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -35,38 +48,74 @@ export default function ProductsTab() {
   const [svcDescription, setSvcDescription] = useState('');
   const [svcCost, setSvcCost] = useState('');
 
-  const handleCreateProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prodName.trim()) return;
 
-    addProduct({
-      name: prodName.trim(),
-      description: prodDescription.trim(),
-      bgColor: prodBgColor,
-    });
+    if (editingProduct) {
+      updateProduct({
+        ...editingProduct,
+        name: prodName.trim(),
+        description: prodDescription.trim(),
+        bgColor: prodBgColor,
+      });
+    } else {
+      addProduct({
+        name: prodName.trim(),
+        description: prodDescription.trim(),
+        bgColor: prodBgColor,
+      });
+    }
 
     // Reset
     setProdName('');
     setProdDescription('');
     setProdBgColor('#0B1B3D');
+    setEditingProduct(null);
     setIsProductModalOpen(false);
   };
 
-  const handleCreateService = (e: React.FormEvent) => {
+  const handleSaveService = (e: React.FormEvent) => {
     e.preventDefault();
     if (!svcName.trim() || !svcCost.trim()) return;
 
-    addServiceItem({
-      name: svcName.trim(),
-      description: svcDescription.trim(),
-      cost: parseFloat(svcCost) || 0,
-    });
+    if (editingService) {
+      updateServiceItem({
+        ...editingService,
+        name: svcName.trim(),
+        description: svcDescription.trim(),
+        cost: parseFloat(svcCost) || 0,
+      });
+    } else {
+      addServiceItem({
+        name: svcName.trim(),
+        description: svcDescription.trim(),
+        cost: parseFloat(svcCost) || 0,
+      });
+    }
 
     // Reset
     setSvcName('');
     setSvcDescription('');
     setSvcCost('');
+    setEditingService(null);
     setIsServiceModalOpen(false);
+  };
+
+  const handleEditProduct = (p: Product) => {
+    setEditingProduct(p);
+    setProdName(p.name);
+    setProdDescription(p.description);
+    setProdBgColor(p.bgColor);
+    setIsProductModalOpen(true);
+  };
+
+  const handleEditService = (s: Service) => {
+    setEditingService(s);
+    setSvcName(s.name);
+    setSvcDescription(s.description);
+    setSvcCost(s.cost.toString());
+    setIsServiceModalOpen(true);
   };
 
   return (
@@ -86,7 +135,13 @@ export default function ProductsTab() {
         <div className="flex items-center gap-2">
           {activeSubTab === 'produtos' ? (
             <button
-              onClick={() => setIsProductModalOpen(true)}
+              onClick={() => {
+                setEditingProduct(null);
+                setProdName('');
+                setProdDescription('');
+                setProdBgColor('#0B1B3D');
+                setIsProductModalOpen(true);
+              }}
               className="px-4 py-2 bg-[#0B1B3D] hover:bg-[#152952] text-white text-sm font-semibold rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95"
             >
               <Plus className="w-4 h-4" />
@@ -94,7 +149,13 @@ export default function ProductsTab() {
             </button>
           ) : (
             <button
-              onClick={() => setIsServiceModalOpen(true)}
+              onClick={() => {
+                setEditingService(null);
+                setSvcName('');
+                setSvcDescription('');
+                setSvcCost('');
+                setIsServiceModalOpen(true);
+              }}
               className="px-4 py-2 bg-[#8B5A2B] hover:bg-[#9C6B3C] text-white text-sm font-semibold rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95"
             >
               <Plus className="w-4 h-4" />
@@ -138,7 +199,8 @@ export default function ProductsTab() {
               key={p.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              onClick={() => handleEditProduct(p)}
+              className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between cursor-pointer hover:border-[#0B1B3D]/30 dark:hover:border-blue-300/30 group"
             >
               <div>
                 <div className="flex items-center justify-between gap-3 mb-3">
@@ -147,13 +209,14 @@ export default function ProductsTab() {
                       className="w-4 h-4 rounded-full shrink-0 border border-black/10 dark:border-white/10"
                       style={{ backgroundColor: p.bgColor }}
                     />
-                    <h3 className="font-display font-bold text-gray-900 dark:text-white truncate">
+                    <h3 className="font-display font-bold text-gray-900 dark:text-white truncate group-hover:text-[#0B1B3D] dark:group-hover:text-blue-300 transition-colors">
                       {p.name}
                     </h3>
                   </div>
                   {/* Delete product button */}
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (deleteProductConfirmId === p.id) {
                         deleteProduct(p.id);
                         setDeleteProductConfirmId(null);
@@ -206,16 +269,18 @@ export default function ProductsTab() {
               key={s.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              onClick={() => handleEditService(s)}
+              className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between cursor-pointer hover:border-[#8B5A2B]/30 dark:hover:border-[#E6D8B8]/30 group"
             >
               <div>
                 <div className="flex items-center justify-between gap-3 mb-3">
-                  <h3 className="font-display font-bold text-gray-900 dark:text-white truncate">
+                  <h3 className="font-display font-bold text-gray-900 dark:text-white truncate group-hover:text-[#8B5A2B] dark:group-hover:text-[#E6D8B8] transition-colors">
                     {s.name}
                   </h3>
                   {/* Delete service button */}
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (deleteServiceConfirmId === s.id) {
                         deleteServiceItem(s.id);
                         setDeleteServiceConfirmId(null);
@@ -280,11 +345,11 @@ export default function ProductsTab() {
               <div className="px-6 py-4 border-b border-slate-50 dark:border-zinc-800 flex items-center justify-between">
                 <h3 className="text-lg font-display font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <Package className="w-5 h-5 text-[#0B1B3D]" />
-                  <span>Cadastrar Novo Produto</span>
+                  <span>{editingProduct ? "Editar Produto / Atendimento" : "Cadastrar Novo Produto"}</span>
                 </h3>
               </div>
 
-              <form onSubmit={handleCreateProduct} className="p-6 space-y-4">
+              <form onSubmit={handleSaveProduct} className="p-6 space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
                     Nome do Produto *
@@ -357,7 +422,10 @@ export default function ProductsTab() {
                 <div className="flex items-center justify-end gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => setIsProductModalOpen(false)}
+                    onClick={() => {
+                      setIsProductModalOpen(false);
+                      setEditingProduct(null);
+                    }}
                     className="px-4 py-2 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 text-sm font-semibold rounded-xl transition-all"
                   >
                     Cancelar
@@ -366,8 +434,7 @@ export default function ProductsTab() {
                     type="submit"
                     className="px-4 py-2 bg-[#0B1B3D] hover:bg-[#152952] text-white text-sm font-semibold rounded-xl transition-all flex items-center gap-1"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span>Salvar Produto</span>
+                    <span>{editingProduct ? "Salvar Alterações" : "Salvar Produto"}</span>
                   </button>
                 </div>
               </form>
@@ -396,11 +463,11 @@ export default function ProductsTab() {
               <div className="px-6 py-4 border-b border-slate-50 dark:border-zinc-800 flex items-center justify-between">
                 <h3 className="text-lg font-display font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-[#8B5A2B]" />
-                  <span>Cadastrar Novo Serviço</span>
+                  <span>{editingService ? "Editar Serviço" : "Cadastrar Novo Serviço"}</span>
                 </h3>
               </div>
 
-              <form onSubmit={handleCreateService} className="p-6 space-y-4">
+              <form onSubmit={handleSaveService} className="p-6 space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
                     Nome do Serviço *
@@ -450,7 +517,10 @@ export default function ProductsTab() {
                 <div className="flex items-center justify-end gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => setIsServiceModalOpen(false)}
+                    onClick={() => {
+                      setIsServiceModalOpen(false);
+                      setEditingService(null);
+                    }}
                     className="px-4 py-2 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 text-sm font-semibold rounded-xl transition-all"
                   >
                     Cancelar
@@ -459,8 +529,7 @@ export default function ProductsTab() {
                     type="submit"
                     className="px-4 py-2 bg-[#8B5A2B] hover:bg-[#9C6B3C] text-white text-sm font-semibold rounded-xl transition-all flex items-center gap-1"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span>Salvar Serviço</span>
+                    <span>{editingService ? "Salvar Alterações" : "Salvar Serviço"}</span>
                   </button>
                 </div>
               </form>

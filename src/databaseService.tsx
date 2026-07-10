@@ -284,8 +284,10 @@ interface DatabaseContextType {
   
   // Products, Services, Users operations
   addProduct: (product: Omit<Product, 'id'>) => Product;
+  updateProduct: (product: Product) => void;
   deleteProduct: (id: string) => void;
   addServiceItem: (service: Omit<Service, 'id'>) => Service;
+  updateServiceItem: (service: Service) => void;
   deleteServiceItem: (id: string) => void;
   addUser: (user: Omit<User, 'id'>) => User;
   updateUser: (user: User) => void;
@@ -568,6 +570,11 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     saveProductsToStore(updated);
   };
 
+  const updateProduct = (updatedProduct: Product) => {
+    const updated = products.map((p) => (p.id === updatedProduct.id ? updatedProduct : p));
+    saveProductsToStore(updated);
+  };
+
   // Service item operations
   const addServiceItem = (sData: Omit<Service, 'id'>): Service => {
     const newService: Service = {
@@ -581,6 +588,11 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
 
   const deleteServiceItem = (id: string) => {
     const updated = services.filter((s) => s.id !== id);
+    saveServicesToStore(updated);
+  };
+
+  const updateServiceItem = (updatedService: Service) => {
+    const updated = services.map((s) => (s.id === updatedService.id ? updatedService : s));
     saveServicesToStore(updated);
   };
 
@@ -648,8 +660,10 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
         deleteTransaction,
         registerClientPayment,
         addProduct,
+        updateProduct,
         deleteProduct,
         addServiceItem,
+        updateServiceItem,
         deleteServiceItem,
         addUser,
         updateUser,

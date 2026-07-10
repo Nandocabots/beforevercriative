@@ -37,6 +37,12 @@ export interface Service {
   cost: number;
 }
 
+export interface PaymentRecord {
+  id: string;
+  value: number;
+  date: string; // YYYY-MM-DD
+}
+
 export interface Appointment {
   id: string;
   clientId: string; // Linked patient
@@ -57,7 +63,9 @@ export interface Appointment {
   ceremonyPlannerPhone?: string;
   downpaymentValue?: number;
   postpaymentValue?: number;
+  payments?: PaymentRecord[]; // Up to 3 payments (value and date)
   includedServiceIds?: string[]; // IDs of services added to this agendamento
+  endTime?: string; // HH:MM end time
 }
 
 export type TransactionType = 'Receita' | 'Despesa';
