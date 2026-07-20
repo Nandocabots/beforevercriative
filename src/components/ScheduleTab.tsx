@@ -28,7 +28,9 @@ import {
   DollarSign,
   Briefcase,
   Info,
-  ChevronDown
+  ChevronDown,
+  TrendingDown,
+  UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -73,7 +75,20 @@ export default function ScheduleTab() {
   const [includedServices, setIncludedServices] = useState<{ serviceId: string; customCost: number }[]>([]);
   const [servicePriceInput, setServicePriceInput] = useState<string>('');
   const [selectedServiceToAdd, setSelectedServiceToAdd] = useState('');
+  const [expenses, setExpenses] = useState<{ id: string; description: string; value: number }[]>([]);
+  const [expenseDescriptionInput, setExpenseDescriptionInput] = useState('');
+  const [expenseValueInput, setExpenseValueInput] = useState('');
   const [formError, setFormError] = useState('');
+
+  // Inline Client Registration for "New Appointment" Modal
+  const [isAddingNewClient, setIsAddingNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+  const [newClientCategory, setNewClientCategory] = useState<'clientes' | 'cerimonialistas' | 'terceiros'>('clientes');
+  const [newClientEmail, setNewClientEmail] = useState('');
+  const [newClientBirthDate, setNewClientBirthDate] = useState('');
+  const [newClientNotes, setNewClientNotes] = useState('');
+  const [inlineClientError, setInlineClientError] = useState('');
 
   const includedServiceIds = useMemo(() => includedServices.map(is => is.serviceId), [includedServices]);
 
@@ -114,7 +129,20 @@ export default function ScheduleTab() {
   const [editIncludedServices, setEditIncludedServices] = useState<{ serviceId: string; customCost: number }[]>([]);
   const [editServicePriceInput, setEditServicePriceInput] = useState<string>('');
   const [editSelectedServiceToAdd, setEditSelectedServiceToAdd] = useState('');
+  const [editExpenses, setEditExpenses] = useState<{ id: string; description: string; value: number }[]>([]);
+  const [editExpenseDescriptionInput, setEditExpenseDescriptionInput] = useState('');
+  const [editExpenseValueInput, setEditExpenseValueInput] = useState('');
   const [editFormError, setEditFormError] = useState('');
+
+  // Inline Client Registration for "Edit Appointment" Modal
+  const [isEditingAddingNewClient, setIsEditingAddingNewClient] = useState(false);
+  const [editNewClientName, setEditNewClientName] = useState('');
+  const [editNewClientPhone, setEditNewClientPhone] = useState('');
+  const [editNewClientCategory, setEditNewClientCategory] = useState<'clientes' | 'cerimonialistas' | 'terceiros'>('clientes');
+  const [editNewClientEmail, setEditNewClientEmail] = useState('');
+  const [editNewClientBirthDate, setEditNewClientBirthDate] = useState('');
+  const [editNewClientNotes, setEditNewClientNotes] = useState('');
+  const [editInlineClientError, setEditInlineClientError] = useState('');
 
   const editIncludedServiceIds = useMemo(() => editIncludedServices.map(is => is.serviceId), [editIncludedServices]);
 
@@ -263,7 +291,81 @@ export default function ScheduleTab() {
       { id: '1', value: 0, date: targetDate }
     ]);
 
+    setIncludedServices([]);
+    setSelectedServiceToAdd('');
+    setExpenses([]);
+    setExpenseDescriptionInput('');
+    setExpenseValueInput('');
+
     setIsModalOpen(true);
+  };
+
+  // Add new client inline during creation
+  const handleInlineClientSubmit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!newClientName.trim()) {
+      setInlineClientError('Por favor, insira o nome da cliente.');
+      return;
+    }
+    try {
+      const created = addClient({
+        name: newClientName.trim(),
+        phone: newClientPhone.trim(),
+        email: newClientEmail.trim(),
+        birthDate: newClientBirthDate,
+        notes: newClientNotes.trim(),
+        category: newClientCategory
+      });
+      if (created && created.id) {
+        setClientId(created.id);
+        setContact(created.phone);
+        // Reset fields
+        setNewClientName('');
+        setNewClientPhone('');
+        setNewClientCategory('clientes');
+        setNewClientEmail('');
+        setNewClientBirthDate('');
+        setNewClientNotes('');
+        setInlineClientError('');
+        setIsAddingNewClient(false);
+      }
+    } catch (err) {
+      setInlineClientError('Erro ao cadastrar cliente.');
+    }
+  };
+
+  // Add new client inline during editing
+  const handleEditInlineClientSubmit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!editNewClientName.trim()) {
+      setEditInlineClientError('Por favor, insira o nome da cliente.');
+      return;
+    }
+    try {
+      const created = addClient({
+        name: editNewClientName.trim(),
+        phone: editNewClientPhone.trim(),
+        email: editNewClientEmail.trim(),
+        birthDate: editNewClientBirthDate,
+        notes: editNewClientNotes.trim(),
+        category: editNewClientCategory
+      });
+      if (created && created.id) {
+        setEditClientId(created.id);
+        setEditContact(created.phone);
+        // Reset fields
+        setEditNewClientName('');
+        setEditNewClientPhone('');
+        setEditNewClientCategory('clientes');
+        setEditNewClientEmail('');
+        setEditNewClientBirthDate('');
+        setEditNewClientNotes('');
+        setEditInlineClientError('');
+        setIsEditingAddingNewClient(false);
+      }
+    } catch (err) {
+      setEditInlineClientError('Erro ao cadastrar cliente.');
+    }
   };
 
   // Handle saving brand-new appointment
@@ -325,11 +427,15 @@ export default function ScheduleTab() {
         payments,
         includedServiceIds,
         includedServices,
+        expenses,
       });
 
       setIsModalOpen(false);
       setIncludedServices([]);
       setSelectedServiceToAdd('');
+      setExpenses([]);
+      setExpenseDescriptionInput('');
+      setExpenseValueInput('');
       setSelectedDate(date);
     } catch (err: any) {
       console.error(err);
@@ -390,6 +496,9 @@ export default function ScheduleTab() {
     } else {
       setEditIncludedServices([]);
     }
+    setEditExpenses(app.expenses || []);
+    setEditExpenseDescriptionInput('');
+    setEditExpenseValueInput('');
     setEditSelectedServiceToAdd('');
     setEditFormError('');
     setIsDetailsModalOpen(true);
@@ -452,6 +561,7 @@ export default function ScheduleTab() {
         date: editDate,
         includedServiceIds: editIncludedServiceIds,
         includedServices: editIncludedServices,
+        expenses: editExpenses,
       });
 
       setIsDetailsModalOpen(false);
@@ -1071,33 +1181,146 @@ export default function ScheduleTab() {
                   </div>
                 )}
 
-                {clients.length === 0 ? (
-                  <div className="p-4 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 text-xs rounded-xl text-center">
-                    Você precisa primeiro cadastrar pacientes na aba "Clientes & Pacientes" para realizar agendamentos!
-                  </div>
-                ) : (
-                  <>
                     {/* Patient Name selection */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                        Paciente cadastrado *
-                      </label>
-                      <select
-                        value={clientId}
-                        onChange={(e) => {
-                          setClientId(e.target.value);
-                          const client = clients.find(c => c.id === e.target.value);
-                          if (client) setContact(client.phone);
-                        }}
-                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
-                      >
-                        <option value="" disabled>Escolha um paciente...</option>
-                        {clients.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">
+                          Paciente / Cliente *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingNewClient(!isAddingNewClient)}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>{isAddingNewClient ? 'Cancelar cadastro' : '+ Cadastrar Nova Cliente'}</span>
+                        </button>
+                      </div>
+
+                      {!isAddingNewClient ? (
+                        <select
+                          value={clientId}
+                          onChange={(e) => {
+                            setClientId(e.target.value);
+                            const client = clients.find(c => c.id === e.target.value);
+                            if (client) setContact(client.phone);
+                          }}
+                          className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
+                        >
+                          <option value="" disabled>Escolha um paciente...</option>
+                          {clients.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                          {clients.length === 0 && (
+                            <option value="" disabled>Nenhuma cliente cadastrada</option>
+                          )}
+                        </select>
+                      ) : (
+                        <div className="p-4 bg-indigo-50/40 dark:bg-zinc-800/20 rounded-2xl border border-indigo-100 dark:border-zinc-800 space-y-3">
+                          <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 uppercase tracking-wider">
+                            <UserPlus className="w-4 h-4" />
+                            <span>Cadastrar Nova Cliente</span>
+                          </p>
+
+                          {inlineClientError && (
+                            <p className="text-xs font-medium text-rose-500 bg-rose-50 dark:bg-rose-950/20 p-2 rounded-lg">
+                              {inlineClientError}
+                            </p>
+                          )}
+
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">Nome Completo *</label>
+                              <input
+                                type="text"
+                                value={newClientName}
+                                onChange={(e) => setNewClientName(e.target.value)}
+                                placeholder="Ex: Amanda Silva"
+                                className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">WhatsApp / Telefone</label>
+                                <input
+                                  type="text"
+                                  value={newClientPhone}
+                                  onChange={(e) => setNewClientPhone(e.target.value)}
+                                  placeholder="Ex: (27) 99888-7766"
+                                  className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">Tipo/Categoria</label>
+                                <select
+                                  value={newClientCategory}
+                                  onChange={(e) => setNewClientCategory(e.target.value as any)}
+                                  className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                                >
+                                  <option value="clientes">Cliente / Paciente</option>
+                                  <option value="cerimonialistas">Cerimonialista</option>
+                                  <option value="terceiros">Terceiro / Outro</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">E-mail (opcional)</label>
+                                <input
+                                  type="email"
+                                  value={newClientEmail}
+                                  onChange={(e) => setNewClientEmail(e.target.value)}
+                                  placeholder="Ex: cliente@email.com"
+                                  className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">Nascimento (opcional)</label>
+                                <input
+                                  type="date"
+                                  value={newClientBirthDate}
+                                  onChange={(e) => setNewClientBirthDate(e.target.value)}
+                                  className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 font-mono"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">Observações (opcional)</label>
+                              <textarea
+                                value={newClientNotes}
+                                onChange={(e) => setNewClientNotes(e.target.value)}
+                                placeholder="Ex: Restrições de horário, indicações..."
+                                rows={2}
+                                className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                              />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                              <button
+                                type="button"
+                                onClick={() => setIsAddingNewClient(false)}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-xs font-semibold"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleInlineClientSubmit}
+                                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-all active:scale-95"
+                              >
+                                Salvar e Selecionar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Contact field */}
@@ -1385,22 +1608,6 @@ export default function ScheduleTab() {
                       </div>
                     </fieldset>
 
-                    {/* Status */}
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                        Presença Inicial
-                      </label>
-                      <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value as AppointmentStatus)}
-                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
-                      >
-                        <option value="Pendente">Pendente (Agendado)</option>
-                        <option value="Realizado">Realizado</option>
-                        <option value="Falta">Falta (Confirmou falta)</option>
-                      </select>
-                    </div>
-
                     {/* INCLUDED SERVICES (Serviços Adicionais) */}
                     <div className="p-4 bg-slate-50 dark:bg-zinc-800/20 rounded-2xl border border-slate-100 dark:border-zinc-800 space-y-3">
                       <label className="block text-xs font-bold text-gray-700 dark:text-zinc-200 flex items-center gap-1">
@@ -1447,7 +1654,7 @@ export default function ScheduleTab() {
 
                           <button
                             type="button"
-                           onClick={() => {
+                            onClick={() => {
                               if (!selectedServiceToAdd) return;
                               if (includedServices.some(item => item.serviceId === selectedServiceToAdd)) {
                                 alert('Este serviço já foi adicionado.');
@@ -1518,6 +1725,105 @@ export default function ScheduleTab() {
                       )}
                     </div>
 
+                    {/* DESPESAS DO ATENDIMENTO (Mesmo padrão de serviços adicionais) */}
+                    <div className="p-4 bg-slate-50 dark:bg-zinc-800/20 rounded-2xl border border-slate-100 dark:border-zinc-800 space-y-3">
+                      <label className="block text-xs font-bold text-gray-700 dark:text-zinc-200 flex items-center gap-1">
+                        <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Despesas do Atendimento (A Pagar)</span>
+                      </label>
+                      
+                      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
+                        <input
+                          type="text"
+                          placeholder="Descrição da despesa (ex: Táxi, Cílios, Lanche...)"
+                          value={expenseDescriptionInput}
+                          onChange={(e) => setExpenseDescriptionInput(e.target.value)}
+                          className="flex-1 min-w-0 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400"
+                        />
+
+                        <div className="flex items-center gap-2 justify-end sm:justify-start shrink-0">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400 font-bold font-mono">R$</span>
+                            <input
+                              type="number"
+                              placeholder="Valor"
+                              value={expenseValueInput}
+                              onChange={(e) => setExpenseValueInput(e.target.value)}
+                              className="w-20 px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 font-mono text-right font-semibold"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!expenseDescriptionInput.trim()) return;
+                              const cost = parseFloat(expenseValueInput) || 0;
+                              const newExpense = {
+                                id: 'exp_' + Math.random().toString(36).substr(2, 9),
+                                description: expenseDescriptionInput.trim(),
+                                value: cost
+                              };
+                              setExpenses([...expenses, newExpense]);
+                              setExpenseDescriptionInput('');
+                              setExpenseValueInput('');
+                            }}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-bold rounded-xl text-xs transition-all active:scale-95 whitespace-nowrap"
+                          >
+                            + Adicionar Despesa
+                          </button>
+                        </div>
+                      </div>
+
+                      {expenses && expenses.length > 0 ? (
+                        <div className="space-y-1.5 pt-1.5">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Despesas adicionadas:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {expenses.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center gap-1.5 pl-2.5 pr-1 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-medium text-gray-700 dark:text-zinc-200"
+                              >
+                                <span>{item.description}</span>
+                                <span className="font-bold text-rose-500">{formatCurrency(item.value)}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setExpenses(expenses.filter(is => is.id !== item.id));
+                                  }}
+                                  className="p-0.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 rounded-md transition-colors"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="text-right text-[11px] font-bold text-rose-600 dark:text-rose-400 pt-1">
+                            Total de Despesas: {formatCurrency(
+                              expenses.reduce((sum, item) => sum + item.value, 0)
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 italic">Nenhuma despesa registrada para este atendimento.</p>
+                      )}
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                        Presença Inicial
+                      </label>
+                      <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as AppointmentStatus)}
+                        className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
+                      >
+                        <option value="Pendente">Pendente (Agendado)</option>
+                        <option value="Realizado">Realizado</option>
+                        <option value="Falta">Falta (Confirmou falta)</option>
+                      </select>
+                    </div>
+
                     {/* Notes */}
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
@@ -1547,8 +1853,6 @@ export default function ScheduleTab() {
                         Agendar Sessão
                       </button>
                     </div>
-                  </>
-                )}
               </form>
             </motion.div>
           </div>
@@ -1601,33 +1905,152 @@ export default function ScheduleTab() {
 
                 {/* Patient dropdown menu */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                    Cliente / Pessoa Atendida *
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-indigo-500 absolute left-3.5 top-3 z-10" />
-                    <select
-                      value={editClientId}
-                      onChange={(e) => {
-                        const newId = e.target.value;
-                        setEditClientId(newId);
-                        const found = clients.find(c => c.id === newId);
-                        if (found) {
-                          setEditContact(found.phone);
-                        }
-                      }}
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-semibold"
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      Cliente / Pessoa Atendida *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingAddingNewClient(!isEditingAddingNewClient)}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors"
                     >
-                      {clients.map((c) => {
-                        const catLabel = c.category === 'cerimonialistas' ? ' (Cerimonialista)' : c.category === 'terceiros' ? ' (Terceiro)' : ' (Cliente)';
-                        return (
-                          <option key={c.id} value={c.id}>
-                            {c.name}{catLabel}
-                          </option>
-                        );
-                      })}
-                    </select>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>{isEditingAddingNewClient ? 'Cancelar cadastro' : '+ Cadastrar Nova Cliente'}</span>
+                    </button>
                   </div>
+
+                  {!isEditingAddingNewClient ? (
+                    <div className="relative">
+                      <User className="w-4 h-4 text-indigo-500 absolute left-3.5 top-3 z-10" />
+                      <select
+                        value={editClientId}
+                        onChange={(e) => {
+                          const newId = e.target.value;
+                          setEditClientId(newId);
+                          const found = clients.find(c => c.id === newId);
+                          if (found) {
+                            setEditContact(found.phone);
+                          }
+                        }}
+                        className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-semibold"
+                      >
+                        {clients.map((c) => {
+                          const catLabel = c.category === 'cerimonialistas' ? ' (Cerimonialista)' : c.category === 'terceiros' ? ' (Terceiro)' : ' (Cliente)';
+                          return (
+                            <option key={c.id} value={c.id}>
+                              {c.name}{catLabel}
+                            </option>
+                          );
+                        })}
+                        {clients.length === 0 && (
+                          <option value="" disabled>Nenhuma cliente cadastrada</option>
+                        )}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-indigo-50/40 dark:bg-zinc-800/20 rounded-2xl border border-indigo-100 dark:border-zinc-800 space-y-3">
+                      <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 uppercase tracking-wider">
+                        <UserPlus className="w-4 h-4" />
+                        <span>Cadastrar Nova Cliente</span>
+                      </p>
+
+                      {editInlineClientError && (
+                        <p className="text-xs font-medium text-rose-500 bg-rose-50 dark:bg-rose-950/20 p-2 rounded-lg">
+                          {editInlineClientError}
+                        </p>
+                      )}
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">Nome Completo *</label>
+                          <input
+                            type="text"
+                            value={editNewClientName}
+                            onChange={(e) => setEditNewClientName(e.target.value)}
+                            placeholder="Ex: Amanda Silva"
+                            className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">WhatsApp / Telefone</label>
+                            <input
+                              type="text"
+                              value={editNewClientPhone}
+                              onChange={(e) => setEditNewClientPhone(e.target.value)}
+                              placeholder="Ex: (27) 99888-7766"
+                              className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">Tipo/Categoria</label>
+                            <select
+                              value={editNewClientCategory}
+                              onChange={(e) => setEditNewClientCategory(e.target.value as any)}
+                              className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                            >
+                              <option value="clientes">Cliente / Paciente</option>
+                              <option value="cerimonialistas">Cerimonialista</option>
+                              <option value="terceiros">Terceiro / Outro</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">E-mail (opcional)</label>
+                            <input
+                              type="email"
+                              value={editNewClientEmail}
+                              onChange={(e) => setEditNewClientEmail(e.target.value)}
+                              placeholder="Ex: cliente@email.com"
+                              className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">Nascimento (opcional)</label>
+                            <input
+                              type="date"
+                              value={editNewClientBirthDate}
+                              onChange={(e) => setEditNewClientBirthDate(e.target.value)}
+                              className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 dark:text-zinc-500 mb-1 uppercase tracking-wider">Observações (opcional)</label>
+                          <textarea
+                            value={editNewClientNotes}
+                            onChange={(e) => setEditNewClientNotes(e.target.value)}
+                            placeholder="Ex: Restrições de horário, indicações..."
+                            rows={2}
+                            className="w-full px-3.5 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                          />
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingAddingNewClient(false)}
+                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-xs font-semibold"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleEditInlineClientSubmit}
+                            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition-all active:scale-95"
+                          >
+                            Salvar e Selecionar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Contact phone number */}
@@ -1951,22 +2374,6 @@ export default function ScheduleTab() {
                   </div>
                 </fieldset>
 
-                {/* Edit Presence Status */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                    Presença / Status
-                  </label>
-                  <select
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value as AppointmentStatus)}
-                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
-                  >
-                    <option value="Pendente">Pendente</option>
-                    <option value="Realizado">Realizado</option>
-                    <option value="Falta">Falta</option>
-                  </select>
-                </div>
-
                 {/* EDIT INCLUDED SERVICES (Serviços Adicionais no Edição) */}
                 <div className="p-4 bg-slate-50 dark:bg-zinc-800/20 rounded-2xl border border-slate-100 dark:border-zinc-800 space-y-3">
                   <label className="block text-xs font-bold text-gray-700 dark:text-zinc-200 flex items-center gap-1">
@@ -2082,6 +2489,105 @@ export default function ScheduleTab() {
                   ) : (
                     <p className="text-[11px] text-gray-400 italic">Nenhum serviço adicional incluído ainda.</p>
                   )}
+                </div>
+
+                {/* 3. INCLUIR "DESPESAS" (Mesmo padrão de serviços adicionais) */}
+                <div className="p-4 bg-slate-50 dark:bg-zinc-800/20 rounded-2xl border border-slate-100 dark:border-zinc-800 space-y-3">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-zinc-200 flex items-center gap-1">
+                    <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Despesas do Atendimento (A Pagar)</span>
+                  </label>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
+                    <input
+                      type="text"
+                      placeholder="Descrição da despesa (ex: Táxi, Cílios, Lanche...)"
+                      value={editExpenseDescriptionInput}
+                      onChange={(e) => setEditExpenseDescriptionInput(e.target.value)}
+                      className="flex-1 min-w-0 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 placeholder-gray-400"
+                    />
+
+                    <div className="flex items-center gap-2 justify-end sm:justify-start shrink-0">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-400 font-bold font-mono">R$</span>
+                        <input
+                          type="number"
+                          placeholder="Valor"
+                          value={editExpenseValueInput}
+                          onChange={(e) => setEditExpenseValueInput(e.target.value)}
+                          className="w-20 px-2 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-zinc-100 font-mono text-right font-semibold"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!editExpenseDescriptionInput.trim()) return;
+                          const cost = parseFloat(editExpenseValueInput) || 0;
+                          const newExpense = {
+                            id: 'exp_' + Math.random().toString(36).substr(2, 9),
+                            description: editExpenseDescriptionInput.trim(),
+                            value: cost
+                          };
+                          setEditExpenses([...editExpenses, newExpense]);
+                          setEditExpenseDescriptionInput('');
+                          setEditExpenseValueInput('');
+                        }}
+                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-bold rounded-xl text-xs transition-all active:scale-95 whitespace-nowrap"
+                      >
+                        + Adicionar Despesa
+                      </button>
+                    </div>
+                  </div>
+
+                  {editExpenses && editExpenses.length > 0 ? (
+                    <div className="space-y-1.5 pt-1.5">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Despesas adicionadas:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {editExpenses.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center gap-1.5 pl-2.5 pr-1 py-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-medium text-gray-700 dark:text-zinc-200"
+                          >
+                            <span>{item.description}</span>
+                            <span className="font-bold text-rose-500">{formatCurrency(item.value)}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditExpenses(editExpenses.filter(is => is.id !== item.id));
+                              }}
+                              className="p-0.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 rounded-md transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-right text-[11px] font-bold text-rose-600 dark:text-rose-400 pt-1">
+                        Total de Despesas: {formatCurrency(
+                          editExpenses.reduce((sum, item) => sum + item.value, 0)
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 italic">Nenhuma despesa registrada para este atendimento.</p>
+                  )}
+                </div>
+
+                {/* Edit Presence Status */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                    Presença / Status
+                  </label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as AppointmentStatus)}
+                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 text-gray-900 dark:text-zinc-100 font-medium"
+                  >
+                    <option value="Pendente">Pendente</option>
+                    <option value="Realizado">Realizado</option>
+                    <option value="Falta">Falta</option>
+                  </select>
                 </div>
 
                 {/* Edit Notes */}

@@ -5,6 +5,7 @@ import ClientsTab from './components/ClientsTab';
 import ScheduleTab from './components/ScheduleTab';
 import ProductsTab from './components/ProductsTab';
 import UsersTab from './components/UsersTab';
+import FinanceTab from './components/FinanceTab';
 import bfLogo from './assets/images/bf_logo_1783625561882.jpg';
 import { 
   LayoutDashboard, 
@@ -18,11 +19,12 @@ import {
   Shield,
   LogOut,
   Lock,
-  User
+  User,
+  DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-type TabType = 'dashboard' | 'clients' | 'schedule' | 'products' | 'users';
+type TabType = 'dashboard' | 'clients' | 'schedule' | 'products' | 'finance' | 'users';
 
 function AppContent() {
   const { currentUser, login, logout } = useDatabase();
@@ -162,6 +164,7 @@ function AppContent() {
     { id: 'clients' as const, label: 'Pessoas', icon: UsersIcon },
     { id: 'schedule' as const, label: 'Agenda', icon: Calendar },
     { id: 'products' as const, label: 'Produtos', icon: Package },
+    { id: 'finance' as const, label: 'Financeiro', icon: DollarSign },
     ...(currentUser.role === 'master' ? [{ id: 'users' as const, label: 'Usuários', icon: Shield }] : [])
   ];
 
@@ -297,6 +300,7 @@ function AppContent() {
             {activeTab === 'clients' && <ClientsTab />}
             {activeTab === 'schedule' && <ScheduleTab />}
             {activeTab === 'products' && <ProductsTab />}
+            {activeTab === 'finance' && <FinanceTab isDarkMode={isDarkMode} />}
             {activeTab === 'users' && <UsersTab />}
           </motion.div>
         </AnimatePresence>

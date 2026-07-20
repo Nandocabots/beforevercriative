@@ -74,241 +74,11 @@ function cleanUndefined(obj: any): any {
 
 
 // Initial Seed Data for Be Forever Criative
-const INITIAL_CLIENTS: Client[] = [
-  {
-    id: 'c1',
-    name: 'Camila Vasconcellos',
-    email: 'camila.v@luxurymail.com',
-    phone: '(11) 98765-4321',
-    birthDate: '1992-05-14',
-    notes: 'Prefere fotos externas, iluminação natural de fim de tarde. Foco em branding profissional.',
-    createdAt: '2026-06-01T10:00:00Z',
-  },
-  {
-    id: 'c2',
-    name: 'Bruno Alencar',
-    email: 'bruno.alencar@outlook.com',
-    phone: '(11) 99122-3344',
-    birthDate: '1985-11-23',
-    notes: 'Acompanhamento mensal de stories para consultoria financeira. Prefere tom sóbrio e minimalista.',
-    createdAt: '2026-06-02T11:00:00Z',
-  },
-  {
-    id: 'c3',
-    name: 'Amanda Rodrigues',
-    email: 'amanda.rodrigues@gmail.com',
-    phone: '(21) 98144-5566',
-    birthDate: '1995-09-02',
-    notes: 'Fotos de estúdio para marca de moda autoral. Necessita de entrega expressa em 48h.',
-    createdAt: '2026-06-03T12:00:00Z',
-  },
-  {
-    id: 'c4',
-    name: 'Diogo Santos',
-    email: 'diogo.santos@terra.com.br',
-    phone: '(11) 97555-8899',
-    birthDate: '1980-03-30',
-    notes: 'Gravação de conteúdo técnico de fisioterapia para Reels e Stories.',
-    createdAt: '2026-06-04T13:00:00Z',
-  },
-];
+const INITIAL_CLIENTS: Client[] = [];
 
-const INITIAL_APPOINTMENTS: Appointment[] = [
-  {
-    id: 'a1',
-    clientId: 'c1',
-    patientName: 'Camila Vasconcellos',
-    date: '2026-06-15',
-    time: '14:00',
-    status: 'Realizado',
-    value: 350.00,
-    notes: 'Sessão de fotos corporativas ao ar livre completada com sucesso.',
-    createdAt: '2026-06-15T09:00:00Z',
-    service: 'Ensaios Fotográficos',
-    includedServiceIds: ['s2'],
-  },
-  {
-    id: 'a2',
-    clientId: 'c1',
-    patientName: 'Camila Vasconcellos',
-    date: '2026-06-22',
-    time: '10:30',
-    status: 'Realizado',
-    value: 250.00,
-    notes: 'Design de 15 templates personalizados de stories de alto engajamento.',
-    createdAt: '2026-06-22T08:00:00Z',
-    service: 'Acompanhamento de Stories',
-    includedServiceIds: ['s4'],
-  },
-  {
-    id: 'a3',
-    clientId: 'c1',
-    patientName: 'Camila Vasconcellos',
-    date: '2026-07-02',
-    time: '15:00',
-    status: 'Pendente',
-    value: 200.00,
-    notes: 'Reunião de alinhamento estratégico para o feed do próximo mês.',
-    createdAt: '2026-06-28T14:30:00Z',
-    service: 'Acompanhamento de Stories',
-    includedServiceIds: [],
-  },
-  {
-    id: 'a4',
-    clientId: 'c2',
-    patientName: 'Bruno Alencar',
-    date: '2026-06-18',
-    time: '16:00',
-    status: 'Realizado',
-    value: 320.00,
-    notes: 'Direção e captação de vídeo para lançamento de infoproduto.',
-    createdAt: '2026-06-18T10:00:00Z',
-    service: 'Produção de Reels',
-    includedServiceIds: ['s1'],
-  },
-  {
-    id: 'a5',
-    clientId: 'c2',
-    patientName: 'Bruno Alencar',
-    date: '2026-06-25',
-    time: '09:00',
-    status: 'Falta',
-    value: 180.00,
-    notes: 'Cliente solicitou adiamento por imprevisto profissional. Cobrada taxa de reagendamento.',
-    createdAt: '2026-06-24T18:00:00Z',
-    service: 'Produção de Reels',
-    includedServiceIds: [],
-  },
-  {
-    id: 'a6',
-    clientId: 'c3',
-    patientName: 'Amanda Rodrigues',
-    date: '2026-06-20',
-    time: '11:00',
-    status: 'Realizado',
-    value: 400.00,
-    notes: 'Sessão completa de fotos de produtos em estúdio climatizado.',
-    createdAt: '2026-06-20T08:30:00Z',
-    service: 'Ensaios Fotográficos',
-    includedServiceIds: ['s2'],
-  },
-  {
-    id: 'a7',
-    clientId: 'c3',
-    patientName: 'Amanda Rodrigues',
-    date: '2026-07-01',
-    time: '14:00',
-    status: 'Pendente',
-    value: 320.00,
-    notes: 'Sessão de fotos adicionais para feed de lançamento.',
-    createdAt: '2026-06-29T10:15:00Z',
-    service: 'Ensaios Fotográficos',
-    includedServiceIds: ['s2'],
-  },
-  {
-    id: 'a8',
-    clientId: 'c4',
-    patientName: 'Diogo Santos',
-    date: '2026-06-24',
-    time: '17:00',
-    status: 'Realizado',
-    value: 450.00,
-    notes: 'Gravação e montagem de 5 Reels dinâmicos de alta conversão.',
-    createdAt: '2026-06-24T15:00:00Z',
-    service: 'Produção de Reels',
-    includedServiceIds: ['s1'],
-  },
-];
+const INITIAL_APPOINTMENTS: Appointment[] = [];
 
-const INITIAL_TRANSACTIONS: Transaction[] = [
-  {
-    id: 't1',
-    description: 'Atendimento - Camila Vasconcellos',
-    date: '2026-06-15',
-    category: 'Produção Digital',
-    value: 350.00,
-    type: 'Receita',
-    status: 'Pago',
-    appointmentId: 'a1',
-    clientId: 'c1',
-    createdAt: '2026-06-15T15:00:00Z',
-  },
-  {
-    id: 't2',
-    description: 'Atendimento - Bruno Alencar',
-    date: '2026-06-20',
-    category: 'Produção Digital',
-    value: 500.00,
-    type: 'Receita',
-    status: 'Pago',
-    clientId: 'c2',
-    createdAt: '2026-06-20T17:30:00Z',
-  },
-  {
-    id: 't3',
-    description: 'Atendimento - Amanda Rodrigues',
-    date: '2026-06-20',
-    category: 'Produção Digital',
-    value: 400.00,
-    type: 'Receita',
-    status: 'Pago',
-    appointmentId: 'a6',
-    clientId: 'c3',
-    createdAt: '2026-06-20T12:30:00Z',
-  },
-  {
-    id: 't4',
-    description: 'Atendimento - Diogo Santos',
-    date: '2026-06-24',
-    category: 'Produção Digital',
-    value: 200.00,
-    type: 'Receita',
-    status: 'Pago',
-    appointmentId: 'a8',
-    clientId: 'c4',
-    createdAt: '2026-06-24T18:30:00Z',
-  },
-  {
-    id: 't5',
-    description: 'Aluguel do Estúdio Fotográfico (Mensal)',
-    date: '2026-06-05',
-    category: 'Infraestrutura',
-    value: 1800.00,
-    type: 'Despesa',
-    status: 'Pago',
-    createdAt: '2026-06-05T09:00:00Z',
-  },
-  {
-    id: 't6',
-    description: 'Equipamento de Iluminação (Softbox, Tripés)',
-    date: '2026-06-10',
-    category: 'Equipamentos',
-    value: 420.00,
-    type: 'Despesa',
-    status: 'Pago',
-    createdAt: '2026-06-10T11:45:00Z',
-  },
-  {
-    id: 't7',
-    description: 'Assinatura Creative Cloud (Photoshop, Premiere)',
-    date: '2026-06-12',
-    category: 'Software / Ferramentas',
-    value: 290.00,
-    type: 'Despesa',
-    status: 'Pago',
-    createdAt: '2026-06-12T14:20:00Z',
-  },
-  {
-    id: 't8',
-    description: 'Cartão de Memória SanDisk Extreme Pro 128GB',
-    date: '2026-06-28',
-    category: 'Acessórios',
-    value: 120.00,
-    type: 'Despesa',
-    status: 'Pendente',
-    createdAt: '2026-06-28T16:00:00Z',
-  },
-];
+const INITIAL_TRANSACTIONS: Transaction[] = [];
 
 const INITIAL_PRODUCTS: Product[] = [
   { id: 'p0', name: 'Noiva', description: 'Atendimento especial completo para noivas (com ficha de cerimonial, local da festa, etc.)', bgColor: '#C2B280' },
@@ -384,20 +154,16 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     // 1. Clients
     const unsubscribeClients = onSnapshot(collection(db, 'clients'), (snapshot) => {
       const list: Client[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() } as Client);
+      const mockIds = ['c1', 'c2', 'c3', 'c4'];
+      snapshot.forEach((snapshotDoc) => {
+        const id = snapshotDoc.id;
+        if (mockIds.includes(id)) {
+          deleteDoc(doc(db, 'clients', id)).catch(err => console.error("Error deleting mock client", err));
+        } else {
+          list.push({ id, ...snapshotDoc.data() } as Client);
+        }
       });
-      if (list.length === 0) {
-        INITIAL_CLIENTS.forEach(async (item) => {
-          try {
-            await setDoc(doc(db, 'clients', item.id), item);
-          } catch (error) {
-            handleFirestoreError(error, OperationType.WRITE, `clients/${item.id}`);
-          }
-        });
-      } else {
-        setClients(list);
-      }
+      setClients(list);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'clients');
     });
@@ -405,20 +171,16 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     // 2. Appointments
     const unsubscribeAppointments = onSnapshot(collection(db, 'appointments'), (snapshot) => {
       const list: Appointment[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() } as Appointment);
+      const mockIds = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'];
+      snapshot.forEach((snapshotDoc) => {
+        const id = snapshotDoc.id;
+        if (mockIds.includes(id)) {
+          deleteDoc(doc(db, 'appointments', id)).catch(err => console.error("Error deleting mock appointment", err));
+        } else {
+          list.push({ id, ...snapshotDoc.data() } as Appointment);
+        }
       });
-      if (list.length === 0) {
-        INITIAL_APPOINTMENTS.forEach(async (item) => {
-          try {
-            await setDoc(doc(db, 'appointments', item.id), item);
-          } catch (error) {
-            handleFirestoreError(error, OperationType.WRITE, `appointments/${item.id}`);
-          }
-        });
-      } else {
-        setAppointments(list);
-      }
+      setAppointments(list);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'appointments');
     });
