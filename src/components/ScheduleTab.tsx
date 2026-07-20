@@ -659,21 +659,21 @@ export default function ScheduleTab() {
   };
 
   const getCardStyle = (svc?: string) => {
-    // If it's Noiva: solid AREIA background, text AZUL MARINHO, border slightly darker areia
-    if (svc === 'Noiva') {
-      return {
-        style: { backgroundColor: '#C2B280', color: '#0B1B3D', borderColor: '#B2A270' },
-        className: 'text-[#0B1B3D]'
-      };
-    }
-    
-    // Check custom products
+    // Check custom products FIRST (including "Noiva" if they edited/created it)
     const prod = products?.find(p => p.name === svc);
     if (prod && prod.bgColor) {
       const textColor = getContrastColor(prod.bgColor);
       return {
         style: { backgroundColor: prod.bgColor, color: textColor, borderColor: `${prod.bgColor}dd` },
         className: ''
+      };
+    }
+
+    // If it's Noiva: solid AREIA background, text AZUL MARINHO, border slightly darker areia
+    if (svc === 'Noiva') {
+      return {
+        style: { backgroundColor: '#C2B280', color: '#0B1B3D', borderColor: '#B2A270' },
+        className: 'text-[#0B1B3D]'
       };
     }
 
@@ -685,30 +685,30 @@ export default function ScheduleTab() {
 
   // Service Badge styling mapper
   const getServiceBadgeStyle = (svc?: string) => {
-    if (svc === 'Noiva') {
-      return 'bg-[#FAF7F0] text-[#0B1B3D] border-[#C2B280]/40';
-    }
     const prod = products?.find(p => p.name === svc);
     if (prod && prod.bgColor) {
       return `border-opacity-30`;
+    }
+    if (svc === 'Noiva') {
+      return 'bg-[#FAF7F0] text-[#0B1B3D] border-[#C2B280]/40';
     }
     return 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border-slate-200/30';
   };
 
   // Google Calendar style compact event colors
   const getCompactServiceStyle = (svc?: string) => {
-    if (svc === 'Noiva') {
-      return {
-        style: { backgroundColor: '#C2B280', color: '#0B1B3D', borderColor: '#B2A270' },
-        className: ''
-      };
-    }
     const prod = products?.find(p => p.name === svc);
     if (prod && prod.bgColor) {
       const textColor = getContrastColor(prod.bgColor);
       return {
         style: { backgroundColor: prod.bgColor, color: textColor, borderColor: `${prod.bgColor}dd` },
         className: 'border'
+      };
+    }
+    if (svc === 'Noiva') {
+      return {
+        style: { backgroundColor: '#C2B280', color: '#0B1B3D', borderColor: '#B2A270' },
+        className: ''
       };
     }
     if (svc === 'Maquiagem') {
@@ -872,10 +872,13 @@ export default function ScheduleTab() {
               <div className="flex md:hidden gap-1 items-center justify-center h-4 w-full mt-auto">
                 {dayAppointments.slice(0, 3).map((app) => {
                   const themeColors = getPillColor(app.patientName);
+                  const prod = products?.find(p => p.name === app.service);
+                  const dotColor = prod?.bgColor || (app.service === 'Noiva' ? '#C2B280' : null);
                   return (
                     <span 
                       key={app.id} 
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${app.service === 'Noiva' ? 'bg-[#C2B280]' : themeColors.dot}`} 
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${!dotColor ? themeColors.dot : ''}`} 
+                      style={dotColor ? { backgroundColor: dotColor } : {}}
                       title={`${app.time}${app.endTime ? ` - ${app.endTime}` : ''} - ${app.patientName}`}
                     />
                   );
@@ -972,171 +975,179 @@ export default function ScheduleTab() {
               Nenhum atendimento registrado para este dia com o filtro selecionado.
             </div>
           ) : (
-            displayedAppointments.map((app) => (
-              <motion.div
-                key={app.id}
-                layout
-                initial={{ opacity: 0, x: -5 }}
-                animate={{ opacity: 1, x: 0 }}
-                onClick={() => handleOpenDetails(app)}
-                style={getCardStyle(app.service).style}
-                className={`border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer ${getCardStyle(app.service).className}`}
-              >
-                {/* Left Column: Time, Patient Name, Service Badge, and Notes */}
-                <div className="flex items-start gap-4">
-                  <div className={`flex flex-col items-center justify-center p-3.5 rounded-xl shrink-0 border ${
-                    app.service === 'Noiva'
-                      ? 'bg-white/20 text-[#0B1B3D] border-white/20'
-                      : 'bg-slate-50 dark:bg-zinc-800/60 text-indigo-600 dark:text-indigo-400 border-slate-100/55 dark:border-zinc-800/30'
-                  }`}>
-                    <Clock className={`w-5 h-5 mb-1 ${app.service === 'Noiva' ? 'text-[#0B1B3D]' : 'text-indigo-500'}`} />
-                    <span className="font-mono text-xs font-bold whitespace-nowrap">{app.time}{app.endTime ? ` - ${app.endTime}` : ''}</span>
-                  </div>
+            displayedAppointments.map((app) => {
+              const prod = products?.find(p => p.name === app.service);
+              const hasCustomColor = !!(prod && prod.bgColor) || app.service === 'Noiva';
+              const cardBg = prod?.bgColor || (app.service === 'Noiva' ? '#C2B280' : '');
+              const cardText = hasCustomColor ? (prod ? getContrastColor(prod.bgColor) : '#0B1B3D') : '';
 
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className={`font-display font-semibold text-base truncate ${app.service === 'Noiva' ? 'text-[#0B1B3D]' : 'text-gray-900 dark:text-white'}`}>
-                        {app.patientName}
-                      </h4>
-                      
-                      {/* Service Badge */}
-                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border uppercase ${
-                        app.service === 'Noiva'
-                          ? 'bg-[#FAF7F0] text-[#0B1B3D] border-[#C2B280]/40'
-                          : getServiceBadgeStyle(app.service)
-                      }`}
-                      style={app.service !== 'Noiva' ? getCompactServiceStyle(app.service).style : {}}
-                      >
-                        {app.service || 'Maquiagem'}
-                      </span>
- 
-                      {/* Currency Value */}
-                      <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                        app.service === 'Noiva'
-                          ? 'text-[#0B1B3D] bg-white/45 shadow-sm'
-                          : 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30'
-                      }`}>
-                        {formatCurrency(app.value)}
-                      </span>
-                    </div>
- 
-                    {/* Contact Number, if available */}
-                    {app.contact && (
-                      <p className={`text-xs flex items-center gap-1 ${
-                        app.service === 'Noiva' ? 'text-[#0B1B3D]/80' : 'text-gray-500 dark:text-zinc-400'
-                      }`}>
-                        <Phone className={`w-3.5 h-3.5 ${app.service === 'Noiva' ? 'text-[#0B1B3D]/70' : 'text-gray-400'}`} />
-                        <span>{app.contact}</span>
-                      </p>
-                    )}
- 
-                    {/* Notes preview */}
-                    {app.notes ? (
-                      <p className={`text-xs flex items-start gap-1 ${
-                        app.service === 'Noiva' ? 'text-[#0B1B3D]/90' : 'text-gray-500 dark:text-zinc-400'
-                      }`}>
-                        <StickyNote className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${app.service === 'Noiva' ? 'text-[#0B1B3D]/70' : 'text-gray-400'}`} />
-                        <span className="italic truncate max-w-[280px] md:max-w-[450px]">{app.notes}</span>
-                      </p>
-                    ) : (
-                      <p className={`text-xs italic ${app.service === 'Noiva' ? 'text-[#0B1B3D]/60' : 'text-gray-400 dark:text-gray-500'}`}>Sem observações adicionais.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right Column: Quick Presence Control Buttons */}
-                <div 
-                  onClick={(e) => e.stopPropagation()} 
-                  className={`flex flex-wrap items-center gap-3 self-end md:self-auto pt-3 md:pt-0 border-t md:border-t-0 ${
-                    app.service === 'Noiva' ? 'border-[#0B1B3D]/15' : 'border-slate-50 dark:border-zinc-800/60'
-                  }`}
+              return (
+                <motion.div
+                  key={app.id}
+                  layout
+                  initial={{ opacity: 0, x: -5 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  onClick={() => handleOpenDetails(app)}
+                  style={getCardStyle(app.service).style}
+                  className={`border rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer ${getCardStyle(app.service).className}`}
                 >
-                  <div className={`text-xs font-semibold mr-1 ${app.service === 'Noiva' ? 'text-[#0B1B3D]/85' : 'text-gray-400'}`}>Presença:</div>
-                  
-                  <div className={`flex items-center gap-1 p-1 rounded-xl ${
-                    app.service === 'Noiva' ? 'bg-[#0B1B3D]/10' : 'bg-slate-100 dark:bg-zinc-800/70'
-                  }`}>
-                    {/* Realizado */}
-                    <button
-                      onClick={() => handleQuickStatusChange(app, 'Realizado')}
-                      title="Marcar como Realizado"
-                      className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                        app.status === 'Realizado'
-                          ? app.service === 'Noiva'
-                            ? 'bg-[#0B1B3D] text-[#C2B280] font-bold shadow-sm'
-                            : 'bg-white dark:bg-zinc-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                          : app.service === 'Noiva'
-                            ? 'text-[#0B1B3D]/70 hover:text-[#0B1B3D]'
-                            : 'text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400'
-                      }`}
+                  {/* Left Column: Time, Patient Name, Service Badge, and Notes */}
+                  <div className="flex items-start gap-4">
+                    <div className={`flex flex-col items-center justify-center p-3.5 rounded-xl shrink-0 border ${
+                      hasCustomColor
+                        ? 'bg-white/20 border-white/20'
+                        : 'bg-slate-50 dark:bg-zinc-800/60 text-indigo-600 dark:text-indigo-400 border-slate-100/55 dark:border-zinc-800/30'
+                    }`}
+                    style={hasCustomColor ? { color: cardText } : {}}
                     >
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      <span>Realizado</span>
-                    </button>
+                      <Clock className="w-5 h-5 mb-1" style={hasCustomColor ? { color: cardText } : {}} />
+                      <span className="font-mono text-xs font-bold whitespace-nowrap">{app.time}{app.endTime ? ` - ${app.endTime}` : ''}</span>
+                    </div>
 
-                    {/* Falta */}
-                    <button
-                      onClick={() => handleQuickStatusChange(app, 'Falta')}
-                      title="Marcar como Falta"
-                      className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                        app.status === 'Falta'
-                          ? app.service === 'Noiva'
-                            ? 'bg-rose-600 text-white font-bold shadow-sm'
-                            : 'bg-white dark:bg-zinc-700 text-rose-500 dark:text-rose-400 shadow-sm'
-                          : app.service === 'Noiva'
-                            ? 'text-[#0B1B3D]/70 hover:text-[#0B1B3D]'
-                            : 'text-gray-500 hover:text-rose-500 dark:hover:text-rose-400'
-                      }`}
-                    >
-                      <XCircle className="w-3.5 h-3.5" />
-                      <span>Falta</span>
-                    </button>
-
-                    {/* Pendente */}
-                    <button
-                      onClick={() => handleQuickStatusChange(app, 'Pendente')}
-                      title="Marcar como Pendente"
-                      className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                        app.status === 'Pendente'
-                          ? app.service === 'Noiva'
-                            ? 'bg-amber-600 text-white font-bold shadow-sm'
-                            : 'bg-white dark:bg-zinc-700 text-amber-600 dark:text-amber-400 shadow-sm'
-                          : app.service === 'Noiva'
-                            ? 'text-[#0B1B3D]/70 hover:text-[#0B1B3D]'
-                            : 'text-gray-500 hover:text-amber-600 dark:hover:text-amber-400'
-                      }`}
-                    >
-                      <HelpCircle className="w-3.5 h-3.5" />
-                      <span>Pendente</span>
-                    </button>
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-display font-semibold text-base truncate" style={hasCustomColor ? { color: cardText } : {}}>
+                          {app.patientName}
+                        </h4>
+                        
+                        {/* Service Badge */}
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border uppercase ${
+                          !hasCustomColor ? getServiceBadgeStyle(app.service) : ''
+                        }`}
+                        style={hasCustomColor ? { backgroundColor: 'rgba(255, 255, 255, 0.2)', color: cardText, borderColor: 'rgba(255, 255, 255, 0.15)' } : getCompactServiceStyle(app.service).style}
+                        >
+                          {app.service || 'Maquiagem'}
+                        </span>
+   
+                        {/* Currency Value */}
+                        <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          hasCustomColor
+                            ? 'shadow-sm'
+                            : 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30'
+                        }`}
+                        style={hasCustomColor ? { backgroundColor: 'rgba(255, 255, 255, 0.45)', color: cardText } : {}}
+                        >
+                          {formatCurrency(app.value)}
+                        </span>
+                      </div>
+   
+                      {/* Contact Number, if available */}
+                      {app.contact && (
+                        <p className="text-xs flex items-center gap-1" style={hasCustomColor ? { color: `${cardText}cc` } : {}}>
+                          <Phone className="w-3.5 h-3.5" style={hasCustomColor ? { color: `${cardText}b3` } : {}} />
+                          <span>{app.contact}</span>
+                        </p>
+                      )}
+   
+                      {/* Notes preview */}
+                      {app.notes ? (
+                        <p className="text-xs flex items-start gap-1" style={hasCustomColor ? { color: `${cardText}e6` } : {}}>
+                          <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0" style={hasCustomColor ? { color: `${cardText}b3` } : {}} />
+                          <span className="italic truncate max-w-[280px] md:max-w-[450px]">{app.notes}</span>
+                        </p>
+                      ) : (
+                        <p className="text-xs italic" style={hasCustomColor ? { color: `${cardText}99` } : {}}>Sem observações adicionais.</p>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Delete button */}
-                  <button
-                    onClick={() => {
-                      if (deleteConfirmId === app.id) {
-                        deleteAppointment(app.id);
-                        setDeleteConfirmId(null);
-                      } else {
-                        setDeleteConfirmId(app.id);
-                        setTimeout(() => setDeleteConfirmId(null), 3000);
-                      }
-                    }}
-                    className={`p-2 border rounded-xl transition-all flex items-center gap-1.5 text-xs font-semibold ${
-                      deleteConfirmId === app.id
-                        ? 'bg-rose-100 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 animate-pulse'
-                        : app.service === 'Noiva'
-                          ? 'border-[#0B1B3D]/20 text-[#0B1B3D]/75 hover:text-[#0B1B3D] hover:bg-[#0B1B3D]/10'
-                          : 'border-slate-100 dark:border-zinc-800 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30'
-                    }`}
-                    title={deleteConfirmId === app.id ? "Clique novamente para confirmar exclusão" : "Excluir Agendamento"}
+                  {/* Right Column: Quick Presence Control Buttons */}
+                  <div 
+                    onClick={(e) => e.stopPropagation()} 
+                    className="flex flex-wrap items-center gap-3 self-end md:self-auto pt-3 md:pt-0 border-t md:border-t-0"
+                    style={hasCustomColor ? { borderColor: `${cardText}26` } : {}}
                   >
-                    <Trash2 className="w-4.5 h-4.5" />
-                    {deleteConfirmId === app.id && <span>Excluir?</span>}
-                  </button>
-                </div>
-              </motion.div>
-            ))
+                    <div className="text-xs font-semibold mr-1" style={hasCustomColor ? { color: `${cardText}d9` } : {}}>Presença:</div>
+                    
+                    <div className="flex items-center gap-1 p-1 rounded-xl"
+                    style={hasCustomColor ? { backgroundColor: `${cardText}1a` } : {}}
+                    >
+                      {/* Realizado */}
+                      <button
+                        onClick={() => handleQuickStatusChange(app, 'Realizado')}
+                        title="Marcar como Realizado"
+                        className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          app.status === 'Realizado'
+                            ? hasCustomColor
+                              ? 'font-bold shadow-sm'
+                              : 'bg-white dark:bg-zinc-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                            : hasCustomColor
+                              ? 'hover:opacity-100'
+                              : 'text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400'
+                        }`}
+                        style={hasCustomColor ? (app.status === 'Realizado' ? { backgroundColor: cardText, color: cardBg } : { color: `${cardText}b3` }) : {}}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>Realizado</span>
+                      </button>
+
+                      {/* Falta */}
+                      <button
+                        onClick={() => handleQuickStatusChange(app, 'Falta')}
+                        title="Marcar como Falta"
+                        className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          app.status === 'Falta'
+                            ? hasCustomColor
+                              ? 'bg-rose-600 text-white font-bold shadow-sm'
+                              : 'bg-white dark:bg-zinc-700 text-rose-500 dark:text-rose-400 shadow-sm'
+                            : hasCustomColor
+                              ? 'hover:opacity-100'
+                              : 'text-gray-500 hover:text-rose-500 dark:hover:text-rose-400'
+                        }`}
+                        style={hasCustomColor ? (app.status === 'Falta' ? {} : { color: `${cardText}b3` }) : {}}
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>Falta</span>
+                      </button>
+
+                      {/* Pendente */}
+                      <button
+                        onClick={() => handleQuickStatusChange(app, 'Pendente')}
+                        title="Marcar como Pendente"
+                        className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          app.status === 'Pendente'
+                            ? hasCustomColor
+                              ? 'bg-amber-600 text-white font-bold shadow-sm'
+                              : 'bg-white dark:bg-zinc-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                            : hasCustomColor
+                              ? 'hover:opacity-100'
+                              : 'text-gray-500 hover:text-amber-600 dark:hover:text-amber-400'
+                        }`}
+                        style={hasCustomColor ? (app.status === 'Pendente' ? {} : { color: `${cardText}b3` }) : {}}
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        <span>Pendente</span>
+                      </button>
+                    </div>
+
+                    {/* Delete button */}
+                    <button
+                      onClick={() => {
+                        if (deleteConfirmId === app.id) {
+                          deleteAppointment(app.id);
+                          setDeleteConfirmId(null);
+                        } else {
+                          setDeleteConfirmId(app.id);
+                          setTimeout(() => setDeleteConfirmId(null), 3000);
+                        }
+                      }}
+                      className={`p-2 border rounded-xl transition-all flex items-center gap-1.5 text-xs font-semibold ${
+                        deleteConfirmId === app.id
+                          ? 'bg-rose-100 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 animate-pulse'
+                          : !hasCustomColor
+                            ? 'border-slate-100 dark:border-zinc-800 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                            : ''
+                      }`}
+                      style={deleteConfirmId !== app.id && hasCustomColor ? { borderColor: `${cardText}33`, color: `${cardText}c0` } : {}}
+                      title={deleteConfirmId === app.id ? "Clique novamente para confirmar exclusão" : "Excluir Agendamento"}
+                    >
+                      <Trash2 className="w-4.5 h-4.5" />
+                      {deleteConfirmId === app.id && <span>Excluir?</span>}
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })
           )}
         </div>
       </div>

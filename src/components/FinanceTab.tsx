@@ -18,7 +18,8 @@ import {
   CalendarDays, 
   X,
   FileText,
-  AlertCircle
+  AlertCircle,
+  ChevronDown
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -44,15 +45,59 @@ export default function FinanceTab({ isDarkMode = false }: FinanceTabProps) {
     addTransaction, 
     updateTransaction, 
     deleteTransaction,
+    deleteAppointment,
     clients
   } = useDatabase();
 
   // Date filter states
-  const [filterType, setFilterType] = useState<'this-month' | 'last-month' | 'jun-26' | 'jul-26' | 'all' | 'custom'>('custom');
+  const [filterType, setFilterType] = useState<string>('all');
   
   // Custom range states (Defaults to a useful preset matching simulated date: 17/05/2026 - 28/06/2026)
   const [startDate, setStartDate] = useState<string>('2026-05-17');
   const [endDate, setEndDate] = useState<string>('2026-06-28');
+
+  // Portuguese month formatting helpers
+  const MONTH_NAMES_PT = useMemo(() => [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ], []);
+
+  const formatMonthYearPT = (yearMonthStr: string): string => {
+    const parts = yearMonthStr.split('-');
+    if (parts.length !== 2) return yearMonthStr;
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    const monthName = MONTH_NAMES_PT[monthIdx] || '';
+    const shortYear = year.slice(-2);
+    return `${monthName}/${shortYear}`;
+  };
+
+  // Dynamically compute all distinct months available in appointments or transactions
+  const availableMonths = useMemo(() => {
+    const monthsSet = new Set<string>();
+    
+    // Default baseline months to guarantee they are always in the dropdown list
+    monthsSet.add('2026-05');
+    monthsSet.add('2026-06');
+    monthsSet.add('2026-07');
+
+    // Extract from appointments
+    appointments.forEach(app => {
+      if (app.date && app.date.length >= 7) {
+        monthsSet.add(app.date.substring(0, 7)); // extracts "YYYY-MM"
+      }
+    });
+
+    // Extract from transactions
+    transactions.forEach(t => {
+      if (t.date && t.date.length >= 7) {
+        monthsSet.add(t.date.substring(0, 7)); // extracts "YYYY-MM"
+      }
+    });
+
+    // Sort chronologically descending (newest months first)
+    return Array.from(monthsSet).sort().reverse();
+  }, [appointments, transactions]);
 
   // Transaction form states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,31 +116,29 @@ export default function FinanceTab({ isDarkMode = false }: FinanceTabProps) {
 
   // Compute active date range based on filterType
   const activeRange = useMemo(() => {
-    const today = new Date('2026-06-20'); // aligned with existing app baseline date
-    
     let start = '';
     let end = '';
 
-    if (filterType === 'this-month') {
-      // June 2026
-      start = '2026-06-01';
-      end = '2026-06-30';
-    } else if (filterType === 'last-month') {
-      // May 2026
-      start = '2026-05-01';
-      end = '2026-05-31';
-    } else if (filterType === 'jun-26') {
-      start = '2026-06-01';
-      end = '2026-06-30';
-    } else if (filterType === 'jul-26') {
-      start = '2026-07-01';
-      end = '2026-07-31';
-    } else if (filterType === 'all') {
+    if (filterType === 'all') {
       start = '1970-01-01';
       end = '2099-12-31';
-    } else {
+    } else if (filterType === 'custom') {
       start = startDate || '2026-01-01';
       end = endDate || '2026-12-31';
+    } else {
+      // Formato YYYY-MM
+      const parts = filterType.split('-');
+      if (parts.length === 2) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        // Pegar o último dia desse mês
+        const lastDay = new Date(year, month, 0).getDate();
+        start = `${parts[0]}-${parts[1].padStart(2, '0')}-01`;
+        end = `${parts[0]}-${parts[1].padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      } else {
+        start = '1970-01-01';
+        end = '2099-12-31';
+      }
     }
 
     return { start, end };
@@ -135,20 +178,30 @@ export default function FinanceTab({ isDarkMode = false }: FinanceTabProps) {
     let pendingReceivedValue = 0;
 
     appointments.forEach(app => {
+      const hasPayments = app.payments && Array.isArray(app.payments) && app.payments.length > 0;
+
       // Received payments in this period (cash-flow: based on payment date)
-      if (app.payments && Array.isArray(app.payments)) {
-        app.payments.forEach(p => {
+      if (hasPayments) {
+        app.payments!.forEach(p => {
           if (p.date >= start && p.date <= end) {
             receivedQty++;
             receivedValue += p.value || 0;
           }
         });
+      } else if (app.status === 'Realizado') {
+        // Se foi realizado e não tem pagamentos registrados, consideramos pago no dia do atendimento
+        if (app.date >= start && app.date <= end) {
+          receivedQty++;
+          receivedValue += (app.packageValue ?? app.value ?? 0);
+        }
       }
 
       // Unpaid pending values (accrual-flow: based on appointment date in period)
       if (app.date >= start && app.date <= end) {
         const totalVal = app.packageValue ?? app.value ?? 0;
-        const totalPaid = app.payments?.reduce((sum, p) => sum + (p.value || 0), 0) || 0;
+        const totalPaid = hasPayments 
+          ? app.payments!.reduce((sum, p) => sum + (p.value || 0), 0) 
+          : (app.status === 'Realizado' ? totalVal : 0);
         const unpaid = Math.max(0, totalVal - totalPaid);
         pendingReceivedValue += unpaid;
       }
@@ -176,14 +229,15 @@ export default function FinanceTab({ isDarkMode = false }: FinanceTabProps) {
 
     // A) Add Agenda payments in period
     appointments.forEach(app => {
-      if (app.payments && Array.isArray(app.payments)) {
-        app.payments.forEach(p => {
+      const hasPayments = app.payments && Array.isArray(app.payments) && app.payments.length > 0;
+      if (hasPayments) {
+        app.payments!.forEach(p => {
           if (p.date >= start && p.date <= end) {
             ledgerItems.push({
               id: `app-payment-${app.id}-${p.id}`,
               description: `Pagamento de Agenda - ${app.patientName} (${app.service || 'Serviço'})`,
               date: p.date,
-              category: 'Agenda / Serviços',
+              category: app.service || 'Agenda / Serviços',
               value: p.value,
               type: 'Receita',
               status: 'Pago',
@@ -193,6 +247,23 @@ export default function FinanceTab({ isDarkMode = false }: FinanceTabProps) {
             });
           }
         });
+      } else if (app.status === 'Realizado') {
+        // Se foi realizado e não tem parcelas, cria uma receita virtual no dia do atendimento
+        if (app.date >= start && app.date <= end) {
+          const totalVal = app.packageValue ?? app.value ?? 0;
+          ledgerItems.push({
+            id: `app-payment-virtual-${app.id}`,
+            description: `Atendimento Realizado - ${app.patientName} (${app.service || 'Serviço'})`,
+            date: app.date,
+            category: app.service || 'Agenda / Serviços',
+            value: totalVal,
+            type: 'Receita',
+            status: 'Pago',
+            clientId: app.clientId,
+            isFromAgenda: true,
+            appointmentId: app.id
+          });
+        }
       }
     });
 
@@ -418,31 +489,29 @@ export default function FinanceTab({ isDarkMode = false }: FinanceTabProps) {
       {/* Filter and Date Range Panel */}
       <div className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 flex items-center gap-1.5 mr-2">
               <Filter className="w-3.5 h-3.5" />
               Período de Análise:
             </span>
-            {[
-              { id: 'custom', label: 'Mini Calendário (Período)' },
-              { id: 'this-month', label: 'Este Mês' },
-              { id: 'last-month', label: 'Mês Passado' },
-              { id: 'jun-26', label: 'Junho/26' },
-              { id: 'jul-26', label: 'Julho/26' },
-              { id: 'all', label: 'Compilado todos os meses' }
-            ].map(preset => (
-              <button
-                key={preset.id}
-                onClick={() => setFilterType(preset.id as any)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  filterType === preset.id
-                    ? 'bg-[#0B1B3D] text-white dark:bg-blue-900 dark:text-white shadow-sm'
-                    : 'bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 text-gray-600 dark:text-zinc-300'
-                }`}
+            <div className="relative min-w-[260px]">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 border border-slate-200/60 dark:border-zinc-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all appearance-none cursor-pointer"
               >
-                {preset.label}
-              </button>
-            ))}
+                <option value="all">Compilado todos os meses</option>
+                <option value="custom">Mini Calendário (Período)</option>
+                {availableMonths.map((ym) => (
+                  <option key={ym} value={ym}>
+                    {formatMonthYearPT(ym)}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500 dark:text-zinc-400">
+                <ChevronDown className="w-4 h-4" />
+              </div>
+            </div>
           </div>
 
           {/* Mini Calendar inputs for custom period */}
@@ -725,9 +794,44 @@ export default function FinanceTab({ isDarkMode = false }: FinanceTabProps) {
                       <td className="py-4 px-6 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           {t.isFromAgenda ? (
-                            <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-500 px-2 py-1 rounded-md" title="Este pagamento é gerenciado na aba Agenda">
-                              Agenda 📅
-                            </span>
+                            <div className="flex items-center gap-1.5 justify-center">
+                              <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 dark:bg-zinc-800 dark:text-zinc-500 px-2 py-1 rounded-md" title="Este pagamento é gerenciado na aba Agenda">
+                                Agenda 📅
+                              </span>
+                              
+                              {deleteConfirmId === t.id ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (t.appointmentId) {
+                                        deleteAppointment(t.appointmentId);
+                                      }
+                                      setDeleteConfirmId(null);
+                                    }}
+                                    className="px-2 py-1 text-[10px] bg-rose-600 text-white rounded font-bold hover:bg-rose-700 transition-colors"
+                                  >
+                                    Sim
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeleteConfirmId(null)}
+                                    className="px-2 py-1 text-[10px] bg-slate-200 dark:bg-zinc-700 text-gray-700 dark:text-zinc-200 rounded font-bold transition-colors"
+                                  >
+                                    Não
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteConfirmId(t.id)}
+                                  className="p-1.5 bg-slate-50 hover:bg-rose-50 hover:text-rose-600 dark:bg-zinc-800 dark:hover:bg-rose-950/40 dark:text-zinc-400 dark:hover:text-rose-400 rounded-lg transition-all"
+                                  title="Excluir Atendimento da Agenda"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           ) : (
                             <>
                               {/* Edit Button */}
